@@ -1,0 +1,7 @@
+server.port=8443
+server.ssl.key-store=src/main/resources/keystore.jks
+server.ssl.key-store-password=changeit
+server.ssl.key-password=changeit
+server.ssl.key-alias=ceh-management
+
+keytool -genkey -alias ceh-management -keyalg RSA -keysize 2048 -keystore keystore.jks -validity 365
