@@ -15,3 +15,52 @@ public Integer findBankIdByBankName(String bankName) {
     // Fetch the bank ID using the provided bank name
     return jdbcTemplate.queryForObject(query, new Object[]{bankName}, Integer.class);
 }
+
+
+
+
+
+
+
+public void saveNormalizedDataBatch(List<NormalizedData> normalizedDataList) {
+    String query = "INSERT INTO esh_main.ceh_tq_core_patch_health (" +
+                   "computer_name, operating_system, client_health_tanium_client_version, ipv4_address, " +
+                   "tanium_client_core_health, custom_tags, patch_coverage_status_details_details, " +
+                   "patch_scan_errors_configuration_id, patch_scan_errors_message, patch_scan_age_days_since_successful_scan, " +
+                   "patch_deployment_errors_deployment_id, patch_deployment_errors_patch_uid, patch_deployment_errors_error_number, " +
+                   "patch_deployment_errors_error_message, patch_has_enforced_scan_configurations, patch_is_process_running, " +
+                   "count, bank_id, staging_id, created_time) " +
+                   "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+    jdbcTemplate.batchUpdate(query, new BatchPreparedStatementSetter() {
+        @Override
+        public void setValues(PreparedStatement ps, int i) throws SQLException {
+            NormalizedData normalizedData = normalizedDataList.get(i);
+            ps.setString(1, normalizedData.getComputerName());
+            ps.setString(2, normalizedData.getOperatingSystem());
+            ps.setLong(3, normalizedData.getClientHealthTaniumClientVersion());
+            ps.setString(4, normalizedData.getIpv4Address());
+            ps.setString(5, normalizedData.getTaniumClientCoreHealth());
+            ps.setString(6, normalizedData.getCustomTags());
+            ps.setString(7, normalizedData.getPatchCoverageStatusDetailsDetails());
+            ps.setString(8, normalizedData.getPatchScanErrorsConfigurationId());
+            ps.setString(9, normalizedData.getPatchScanErrorsMessage());
+            ps.setString(10, normalizedData.getPatchScanAgeDaysSinceSuccessfulScan());
+            ps.setString(11, normalizedData.getPatchDeploymentErrorsDeploymentId());
+            ps.setString(12, normalizedData.getPatchDeploymentErrorsPatchUid());
+            ps.setString(13, normalizedData.getPatchDeploymentErrorsErrorNumber());
+            ps.setString(14, normalizedData.getPatchDeploymentErrorsErrorMessage());
+            ps.setString(15, normalizedData.getPatchHasEnforcedScanConfigurations());
+            ps.setString(16, normalizedData.getPatchIsProcessRunning());
+            ps.setLong(17, normalizedData.getCount());
+            ps.setLong(18, normalizedData.getBankId());
+            ps.setLong(19, normalizedData.getStagingId());
+            ps.setTimestamp(20, Timestamp.valueOf(normalizedData.getCreatedTime()));
+        }
+
+        @Override
+        public int getBatchSize() {
+            return normalizedDataList.size();
+        }
+    });
+}
