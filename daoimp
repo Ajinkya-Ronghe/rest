@@ -7,3 +7,11 @@ public List<StagingData> fetchAndUpdateTop100Unprocessed() {
     // Perform the update and fetch the updated rows
     return jdbcTemplate.query(query, new StagingDataRowMapper());
 }
+
+
+public Integer findBankIdByBankName(String bankName) {
+    String query = "SELECT b.bank_id FROM BankDetails b WHERE b.bank_name = ?";
+    
+    // Fetch the bank ID using the provided bank name
+    return jdbcTemplate.queryForObject(query, new Object[]{bankName}, Integer.class);
+}
