@@ -36,31 +36,82 @@ public void saveNormalizedDataBatch(List<NormalizedData> normalizedDataList) {
         @Override
         public void setValues(PreparedStatement ps, int i) throws SQLException {
             NormalizedData normalizedData = normalizedDataList.get(i);
-            ps.setString(1, normalizedData.getComputerName());
-            ps.setString(2, normalizedData.getOperatingSystem());
-            ps.setLong(3, normalizedData.getClientHealthTaniumClientVersion());
-            ps.setString(4, normalizedData.getIpv4Address());
-            ps.setString(5, normalizedData.getTaniumClientCoreHealth());
-            ps.setString(6, normalizedData.getCustomTags());
-            ps.setString(7, normalizedData.getPatchCoverageStatusDetailsDetails());
-            ps.setString(8, normalizedData.getPatchScanErrorsConfigurationId());
-            ps.setString(9, normalizedData.getPatchScanErrorsMessage());
-            ps.setString(10, normalizedData.getPatchScanAgeDaysSinceSuccessfulScan());
-            ps.setString(11, normalizedData.getPatchDeploymentErrorsDeploymentId());
-            ps.setString(12, normalizedData.getPatchDeploymentErrorsPatchUid());
-            ps.setString(13, normalizedData.getPatchDeploymentErrorsErrorNumber());
-            ps.setString(14, normalizedData.getPatchDeploymentErrorsErrorMessage());
-            ps.setString(15, normalizedData.getPatchHasEnforcedScanConfigurations());
-            ps.setString(16, normalizedData.getPatchIsProcessRunning());
-            ps.setLong(17, normalizedData.getCount());
-            ps.setLong(18, normalizedData.getBankId());
-            ps.setLong(19, normalizedData.getStagingId());
-            ps.setTimestamp(20, Timestamp.valueOf(normalizedData.getCreatedTime()));
+            
+            // Set values using the column names
+            ps.setString(findColumnIndex("computer_name"), normalizedData.getComputerName());
+            ps.setString(findColumnIndex("operating_system"), normalizedData.getOperatingSystem());
+            ps.setLong(findColumnIndex("client_health_tanium_client_version"), normalizedData.getClientHealthTaniumClientVersion());
+            ps.setString(findColumnIndex("ipv4_address"), normalizedData.getIpv4Address());
+            ps.setString(findColumnIndex("tanium_client_core_health"), normalizedData.getTaniumClientCoreHealth());
+            ps.setString(findColumnIndex("custom_tags"), normalizedData.getCustomTags());
+            ps.setString(findColumnIndex("patch_coverage_status_details_details"), normalizedData.getPatchCoverageStatusDetailsDetails());
+            ps.setString(findColumnIndex("patch_scan_errors_configuration_id"), normalizedData.getPatchScanErrorsConfigurationId());
+            ps.setString(findColumnIndex("patch_scan_errors_message"), normalizedData.getPatchScanErrorsMessage());
+            ps.setString(findColumnIndex("patch_scan_age_days_since_successful_scan"), normalizedData.getPatchScanAgeDaysSinceSuccessfulScan());
+            ps.setString(findColumnIndex("patch_deployment_errors_deployment_id"), normalizedData.getPatchDeploymentErrorsDeploymentId());
+            ps.setString(findColumnIndex("patch_deployment_errors_patch_uid"), normalizedData.getPatchDeploymentErrorsPatchUid());
+            ps.setString(findColumnIndex("patch_deployment_errors_error_number"), normalizedData.getPatchDeploymentErrorsErrorNumber());
+            ps.setString(findColumnIndex("patch_deployment_errors_error_message"), normalizedData.getPatchDeploymentErrorsErrorMessage());
+            ps.setString(findColumnIndex("patch_has_enforced_scan_configurations"), normalizedData.getPatchHasEnforcedScanConfigurations());
+            ps.setString(findColumnIndex("patch_is_process_running"), normalizedData.getPatchIsProcessRunning());
+            ps.setLong(findColumnIndex("count"), normalizedData.getCount());
+            ps.setLong(findColumnIndex("bank_id"), normalizedData.getBankId());
+            ps.setLong(findColumnIndex("staging_id"), normalizedData.getStagingId());
+            ps.setTimestamp(findColumnIndex("created_time"), Timestamp.valueOf(normalizedData.getCreatedTime()));
         }
 
         @Override
         public int getBatchSize() {
             return normalizedDataList.size();
         }
+
+        // Helper method to return the correct column index based on the column name
+        private int findColumnIndex(String columnName) {
+            switch (columnName) {
+                case "computer_name":
+                    return 1;
+                case "operating_system":
+                    return 2;
+                case "client_health_tanium_client_version":
+                    return 3;
+                case "ipv4_address":
+                    return 4;
+                case "tanium_client_core_health":
+                    return 5;
+                case "custom_tags":
+                    return 6;
+                case "patch_coverage_status_details_details":
+                    return 7;
+                case "patch_scan_errors_configuration_id":
+                    return 8;
+                case "patch_scan_errors_message":
+                    return 9;
+                case "patch_scan_age_days_since_successful_scan":
+                    return 10;
+                case "patch_deployment_errors_deployment_id":
+                    return 11;
+                case "patch_deployment_errors_patch_uid":
+                    return 12;
+                case "patch_deployment_errors_error_number":
+                    return 13;
+                case "patch_deployment_errors_error_message":
+                    return 14;
+                case "patch_has_enforced_scan_configurations":
+                    return 15;
+                case "patch_is_process_running":
+                    return 16;
+                case "count":
+                    return 17;
+                case "bank_id":
+                    return 18;
+                case "staging_id":
+                    return 19;
+                case "created_time":
+                    return 20;
+                default:
+                    throw new IllegalArgumentException("Unknown column name: " + columnName);
+            }
+        }
     });
 }
+
