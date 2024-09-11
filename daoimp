@@ -1,43 +1,9 @@
-package com.infy.ceh.management.customization.dao.impl;
+public List<StagingData> fetchAndUpdateTop100Unprocessed() {
+    String query = "UPDATE StagingData " +
+                   "SET status = 'P' " +
+                   "WHERE id IN (SELECT id FROM StagingData WHERE status = 'U' ORDER BY id ASC LIMIT 100) " +
+                   "RETURNING *";
 
-import com.infy.ceh.management.customization.entity.StagingData;
-import com.infy.ceh.management.customization.dao.StagingDataDao;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.core.RowMapper;
-import org.springframework.stereotype.Repository;
-
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.List;
-
-@Repository
-public class StagingDataJdbcDaoImpl implements StagingDataDao {
-
-    @Autowired
-    private JdbcTemplate jdbcTemplate;
-
-    // Fetch top 100 unprocessed rows
-    @Override
-    public List<StagingData> fetchTop100Unprocessed() {
-        String query = "SELECT * FROM StagingData WHERE status = 'U' ORDER BY id ASC LIMIT 100";
-        return jdbcTemplate.query(query, new StagingDataRowMapper());
-    }
-
-    // Inner class to map the ResultSet to StagingData entity
-    private static class StagingDataRowMapper implements RowMapper<StagingData> {
-        @Override
-        public StagingData mapRow(ResultSet rs, int rowNum) throws SQLException {
-            StagingData stagingData = new StagingData();
-            stagingData.setId(rs.getInt("id"));
-            stagingData.setCreateDate(rs.getTimestamp("create_date").toLocalDateTime());
-            stagingData.setDataType(rs.getString("data_type"));
-            stagingData.setJsonMetadataTypeId(rs.getInt("json_metadata_type_id"));
-            stagingData.setReqName(rs.getString("req_name"));
-            stagingData.setJsonTextData(rs.getString("json_text_data"));
-            stagingData.setDataIdentifier(rs.getBoolean("data_identifier"));
-            stagingData.setStatus(rs.getString("status"));
-            return stagingData;
-        }
-    }
+    // Perform the update and fetch the updated rows
+    return jdbcTemplate.query(query, new StagingDataRowMapper());
 }
