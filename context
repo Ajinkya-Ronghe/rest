@@ -1,0 +1,46 @@
+public class SpringContext implements ApplicationContextAware {
+
+    private static ApplicationContext context;
+
+    @Override
+    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+        context = applicationContext;
+    }
+
+    public static <T> T getBean(Class<T> beanClass) {
+        return context.getBean(beanClass);
+    }
+}
+
+
+@PersistJobDataAfterExecution
+@DisallowConcurrentExecution
+public class GetTestJobDetails extends QuartzJobBean {
+
+    @Override
+    protected void executeInternal(JobExecutionContext context) throws JobExecutionException {
+        logger.debug("Inside GetTestJobDetails");
+        try {
+            logger.debug("Executing task to fetch Fiserv job details");
+
+            // Fetching the bean manually
+            FiservDataNormalizeService fiservService = SpringContext.getBean(FiservDataNormalizeService.class);
+            fiservService.processUnprocessedStagingDataInBatch();
+
+            logger.debug("Execution completed for getting Fiserv job details");
+        } catch (Exception e) {
+            logger.error("Error occurred while getting Fiserv job details", e);
+        }
+    }
+}
+
+
+
+@Configuration
+public class AppConfig {
+
+   @Bean
+   public SpringContext springContext() {
+       return new SpringContext();
+   }
+}
