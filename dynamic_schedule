@@ -1,0 +1,51 @@
+public Map<String, Object> getTableSchemaAsJson(String tableName) {
+    String sql = "SELECT schema_definition FROM schema_metadata WHERE table_name = ?";
+    String jsonSchema = jdbcTemplate.queryForObject(sql, new Object[]{tableName}, String.class);
+    ObjectMapper objectMapper = new ObjectMapper();
+    return objectMapper.readValue(jsonSchema, new TypeReference<Map<String, Object>>() {});
+}
+
+
+
+public Map<String, Object> mapRowToDto(Map<String, Object> schema, ResultSet rs) throws SQLException {
+    List<Map<String, Object>> columns = (List<Map<String, Object>>) schema.get("columns");
+    Map<String, Object> dto = new HashMap<>();
+    
+    for (Map<String, Object> column : columns) {
+        String columnName = (String) column.get("column_name");
+        dto.put(columnName, rs.getObject(columnName));
+    }
+    return dto;
+}
+
+
+public String generateInsertQuery(String tableName, Map<String, Object> schema) {
+    List<Map<String, Object>> columns = (List<Map<String, Object>>) schema.get("columns");
+
+    String columnNames = columns.stream()
+        .map(col -> (String) col.get("column_name"))
+        .collect(Collectors.joining(", "));
+
+    String values = columns.stream()
+        .map(col -> "?")
+        .collect(Collectors.joining(", "));
+
+    return String.format("INSERT INTO %s (%s) VALUES (%s)", tableName, columnNames, values);
+}
+
+
+
+
+public void batchInsert(String tableName, List<Map<String, Object>> dtoList) {
+    Map<String, Object> schema = getTableSchemaAsJson(tableName);
+    String insertQuery = generateInsertQuery(tableName, schema);
+
+    List<Map<String, Object>> columns = (List<Map<String, Object>>) schema.get("columns");
+
+    jdbcTemplate.batchUpdate(insertQuery, dtoList, dtoList.size(), (ps, dto) -> {
+        for (int i = 0; i < columns.size(); i++) {
+            String columnName = (String) columns.get(i).get("column_name");
+            ps.setObject(i + 1, dto.get(columnName));
+        }
+    });
+}
