@@ -1,0 +1,22 @@
+{
+  "columns": [
+    {"column_name": "id", "data_type": "BIGINT", "is_nullable": false},
+    {"column_name": "computer_name", "data_type": "VARCHAR(100)", "is_nullable": true},
+    {"column_name": "operating_system", "data_type": "VARCHAR(1000)", "is_nullable": true},
+    {"column_name": "client_system_character_version", "data_type": "VARCHAR(100)", "is_nullable": true},
+    {"column_name": "ipv4_address", "data_type": "VARCHAR(100)", "is_nullable": true},
+    {"column_name": "tanium_health", "data_type": "VARCHAR(100)", "is_nullable": true},
+    {"column_name": "custom_tags", "data_type": "VARCHAR(100)", "is_nullable": true},
+    {"column_name": "patch_coverage_status_details_status", "data_type": "VARCHAR(100)", "is_nullable": true},
+    {"column_name": "patch_scan_errors_configuration_id", "data_type": "VARCHAR(100)", "is_nullable": true},
+    {"column_name": "patch_scan_age_days_since_successful_scan", "data_type": "VARCHAR(100)", "is_nullable": true},
+    {"column_name": "patch_deployment_errors_patch_uuid", "data_type": "VARCHAR(100)", "is_nullable": true},
+    {"column_name": "patch_deployment_errors_client_id", "data_type": "VARCHAR(100)", "is_nullable": true},
+    {"column_name": "patch_deployment_errors_error_message", "data_type": "VARCHAR(100)", "is_nullable": true},
+    {"column_name": "patch_has_enforced_scan_configurations", "data_type": "VARCHAR(100)", "is_nullable": true},
+    {"column_name": "patch_is_process_running", "data_type": "VARCHAR(100)", "is_nullable": true},
+    {"column_name": "bank_id", "data_type": "BIGINT", "is_nullable": true},
+    {"column_name": "staging_id", "data_type": "BIGINT", "is_nullable": true},
+    {"column_name": "created_time", "data_type": "TIMESTAMP WITHOUT TIME ZONE", "is_nullable": true}
+  ]
+}
