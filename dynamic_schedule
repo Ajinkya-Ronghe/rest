@@ -92,3 +92,28 @@ private Map<String, Object> mapJsonToDto(Map<String, Object> jsonObject, Map<Str
     return dto;
 }
 
+
+
+
+
+
+
+
+public Map<String, Object> getTableSchemaAsJson(int id) throws IOException {
+    String sql = "SELECT table_name, schema_definition FROM schema_metadata WHERE id = ?";
+
+    // Execute query with id as the parameter and return both table_name and schema_definition
+    return jdbcTemplate.queryForObject(sql, new Object[]{id}, (rs, rowNum) -> {
+        Map<String, Object> result = new HashMap<>();
+        result.put("table_name", rs.getString("table_name"));
+        
+        // Parse the schema_definition JSON into a Map<String, Object>
+        ObjectMapper objectMapper = new ObjectMapper();
+        String jsonSchema = rs.getString("schema_definition");
+        Map<String, Object> schemaDefinition = objectMapper.readValue(jsonSchema, new TypeReference<Map<String, Object>>() {});
+
+        result.put("schema_definition", schemaDefinition);
+        return result;
+    });
+}
+
