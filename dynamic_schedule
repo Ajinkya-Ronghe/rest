@@ -117,3 +117,81 @@ public Map<String, Object> getTableSchemaAsJson(int id) throws IOException {
     });
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+public void processAndInsertRawJson(String rawJson) throws IOException {
+    // Step 1: Parse the raw JSON to determine if it's an object or an array
+    ObjectMapper objectMapper = new ObjectMapper();
+    JsonNode jsonNode = objectMapper.readTree(rawJson);
+    
+    // Step 2: Retrieve the schema and table name using the ID from the raw JSON
+    int id = extractIdFromJson(jsonNode);  // You will need a function to extract ID from the raw JSON
+    Map<String, Object> schemaAndTable = getTableSchemaAsJson(id);
+
+    // Extract table name and schema from the response
+    String tableName = (String) schemaAndTable.get("table_name");
+    Map<String, Object> schema = (Map<String, Object>) schemaAndTable.get("schema_definition");
+
+    List<Map<String, Object>> dtoList = new ArrayList<>();
+
+    // Step 3: Check if the input is a single object or an array
+    if (jsonNode.isArray()) {
+        // It's an array, process each element
+        for (JsonNode element : jsonNode) {
+            Map<String, Object> jsonObject = objectMapper.convertValue(element, new TypeReference<Map<String, Object>>() {});
+            Map<String, Object> dto = mapJsonToDto(jsonObject, schema);
+            dtoList.add(dto);
+        }
+    } else if (jsonNode.isObject()) {
+        // It's a single object
+        Map<String, Object> jsonObject = objectMapper.convertValue(jsonNode, new TypeReference<Map<String, Object>>() {});
+        Map<String, Object> dto = mapJsonToDto(jsonObject, schema);
+        dtoList.add(dto);
+    }
+
+    // Step 4: Perform batch insert into the table
+    batchInsert(tableName, dtoList);
+}
+
+// Step 2.1: Extract the ID from the JSON to fetch the schema (you can adjust this based on your structure)
+private int extractIdFromJson(JsonNode jsonNode) {
+    if (jsonNode.has("id")) {
+        return jsonNode.get("id").asInt();
+    }
+    throw new IllegalArgumentException("ID field not found in the input JSON");
+}
+
+// Step 3.1: Map each JSON object to a DTO based on the schema
+private Map<String, Object> mapJsonToDto(Map<String, Object> jsonObject, Map<String, Object> schema) {
+    List<Map<String, Object>> columns = (List<Map<String, Object>>) schema.get("columns");
+    Map<String, Object> dto = new HashMap<>();
+
+    for (Map<String, Object> column : columns) {
+        String columnName = (String) column.get("column_name");
+        // Map the incoming JSON value to the DTO if it exists
+        if (jsonObject.containsKey(columnName)) {
+            dto.put(columnName, jsonObject.get(columnName));
+        }
+    }
+    return dto;
+}
+
+
