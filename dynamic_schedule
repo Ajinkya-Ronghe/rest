@@ -49,3 +49,46 @@ public void batchInsert(String tableName, List<Map<String, Object>> dtoList) {
         }
     });
 }
+
+
+
+
+
+
+
+
+
+public void processAndInsertJsonArray(String tableName, String jsonArray) throws IOException {
+    // Step 1: Parse the incoming JSON array into List<Map<String, Object>>
+    ObjectMapper objectMapper = new ObjectMapper();
+    List<Map<String, Object>> incomingJsonList = objectMapper.readValue(jsonArray, new TypeReference<List<Map<String, Object>>>() {});
+    
+    // Step 2: Retrieve the schema for the table from the schema metadata
+    Map<String, Object> schema = getTableSchemaAsJson(tableName);
+    
+    // Step 3: Map each incoming JSON object to a DTO using the schema
+    List<Map<String, Object>> dtoList = new ArrayList<>();
+    for (Map<String, Object> jsonObject : incomingJsonList) {
+        Map<String, Object> dto = mapJsonToDto(jsonObject, schema);
+        dtoList.add(dto);
+    }
+
+    // Step 4: Perform batch insert into the table
+    batchInsert(tableName, dtoList);
+}
+
+// Step 3.1: Map each JSON object to a DTO based on the schema
+private Map<String, Object> mapJsonToDto(Map<String, Object> jsonObject, Map<String, Object> schema) {
+    List<Map<String, Object>> columns = (List<Map<String, Object>>) schema.get("columns");
+    Map<String, Object> dto = new HashMap<>();
+    
+    for (Map<String, Object> column : columns) {
+        String columnName = (String) column.get("column_name");
+        // Map the incoming JSON value to the DTO if it exists
+        if (jsonObject.containsKey(columnName)) {
+            dto.put(columnName, jsonObject.get(columnName));
+        }
+    }
+    return dto;
+}
+
