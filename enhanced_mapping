@@ -1,0 +1,40 @@
+private Map<String, Object> mapJsonToDto(Map<String, Object> jsonObject, Map<String, Object> schema) {
+    List<Map<String, Object>> columns = (List<Map<String, Object>>) schema.get("columns");
+    Map<String, Object> dto = new HashMap<>();
+
+    for (Map<String, Object> column : columns) {
+        String columnName = (String) column.get("column_name");
+        
+        // Check if the columnName is a nested key (e.g., "address.city" for a nested object)
+        if (columnName.contains(".")) {
+            Object nestedValue = getNestedValue(jsonObject, columnName);
+            if (nestedValue != null) {
+                dto.put(columnName, nestedValue);
+            }
+        } else {
+            // If it's a top-level key, map it directly
+            if (jsonObject.containsKey(columnName)) {
+                dto.put(columnName, jsonObject.get(columnName));
+            }
+        }
+    }
+    return dto;
+}
+
+
+
+
+
+private Object getNestedValue(Map<String, Object> jsonObject, String nestedKey) {
+    String[] keys = nestedKey.split("\\.");
+    Object currentValue = jsonObject;
+
+    for (String key : keys) {
+        if (currentValue instanceof Map) {
+            currentValue = ((Map<String, Object>) currentValue).get(key);
+        } else {
+            return null; // If we hit a non-map value before reaching the leaf key, return null
+        }
+    }
+    return currentValue;
+}
