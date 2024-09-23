@@ -1,40 +1,66 @@
+public void processAndInsertRawJson(String rawJson) throws IOException {
+    // Step 1: Parse the raw JSON
+    ObjectMapper objectMapper = new ObjectMapper();
+    JsonNode jsonNode = objectMapper.readTree(rawJson);
+    
+    // Step 2: Check if the JSON contains a list and process accordingly
+    if (jsonNode.isArray()) {
+        // Handle case where the entire JSON is an array
+        processJsonArray(jsonNode, objectMapper);
+    } else if (jsonNode.isObject()) {
+        // If the root is an object, search for any list inside the object
+        for (Iterator<Map.Entry<String, JsonNode>> it = jsonNode.fields(); it.hasNext(); ) {
+            Map.Entry<String, JsonNode> field = it.next();
+            JsonNode valueNode = field.getValue();
+            if (valueNode.isArray()) {
+                // Process the list (array) found inside the object
+                processJsonArray(valueNode, objectMapper);
+            }
+        }
+    }
+}
+
+// Method to process an array of JSON objects and map to DTO
+private void processJsonArray(JsonNode arrayNode, ObjectMapper objectMapper) throws IOException {
+    // Retrieve schema (you can adapt this as needed to get it from id or table_name)
+    int id = extractIdFromJson(arrayNode.get(0));  // Extract ID from the first element to fetch schema
+    Map<String, Object> schemaAndTable = getTableSchemaAsJson(id);
+    String tableName = (String) schemaAndTable.get("table_name");
+    Map<String, Object> schema = (Map<String, Object>) schemaAndTable.get("schema_definition");
+
+    // Prepare list for batch insert
+    List<Map<String, Object>> dtoList = new ArrayList<>();
+
+    // Loop through each element in the array and map it to the DTO
+    for (JsonNode elementNode : arrayNode) {
+        Map<String, Object> jsonObject = objectMapper.convertValue(elementNode, new TypeReference<Map<String, Object>>() {});
+        Map<String, Object> dto = mapJsonToDto(jsonObject, schema);  // Use the previous mapping method
+        dtoList.add(dto);
+    }
+
+    // Perform batch insert
+    batchInsert(tableName, dtoList);
+}
+
+// This method remains the same as before: maps each JSON object to a DTO based on the schema
 private Map<String, Object> mapJsonToDto(Map<String, Object> jsonObject, Map<String, Object> schema) {
     List<Map<String, Object>> columns = (List<Map<String, Object>>) schema.get("columns");
     Map<String, Object> dto = new HashMap<>();
 
     for (Map<String, Object> column : columns) {
         String columnName = (String) column.get("column_name");
-        
-        // Check if the columnName is a nested key (e.g., "address.city" for a nested object)
-        if (columnName.contains(".")) {
-            Object nestedValue = getNestedValue(jsonObject, columnName);
-            if (nestedValue != null) {
-                dto.put(columnName, nestedValue);
-            }
-        } else {
-            // If it's a top-level key, map it directly
-            if (jsonObject.containsKey(columnName)) {
-                dto.put(columnName, jsonObject.get(columnName));
-            }
+        // Map the incoming JSON value to the DTO if it exists
+        if (jsonObject.containsKey(columnName)) {
+            dto.put(columnName, jsonObject.get(columnName));
         }
     }
     return dto;
 }
 
-
-
-
-
-private Object getNestedValue(Map<String, Object> jsonObject, String nestedKey) {
-    String[] keys = nestedKey.split("\\.");
-    Object currentValue = jsonObject;
-
-    for (String key : keys) {
-        if (currentValue instanceof Map) {
-            currentValue = ((Map<String, Object>) currentValue).get(key);
-        } else {
-            return null; // If we hit a non-map value before reaching the leaf key, return null
-        }
+// Optional: Extract ID to fetch schema if needed
+private int extractIdFromJson(JsonNode jsonNode) {
+    if (jsonNode.has("id")) {
+        return jsonNode.get("id").asInt();
     }
-    return currentValue;
+    throw new IllegalArgumentException("ID field not found in the input JSON");
 }
