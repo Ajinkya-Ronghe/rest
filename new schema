@@ -1,0 +1,91 @@
+CREATE TABLE ceh_tn_test_polycloud_poc (
+    id SERIAL PRIMARY KEY,
+    count INT,
+    ip_address VARCHAR(255),
+    custom_tags VARCHAR(255),
+    computer_name VARCHAR(255),
+    operating_system VARCHAR(255)
+);
+
+{
+  "columns": [
+    {
+      "column_name": "id",
+      "data_type": "SERIAL",
+      "is_nullable": false
+    },
+    {
+      "column_name": "count",
+      "data_type": "INT",
+      "is_nullable": true
+    },
+    {
+      "column_name": "ip_address",
+      "data_type": "VARCHAR(255)",
+      "is_nullable": true
+    },
+    {
+      "column_name": "custom_tags",
+      "data_type": "VARCHAR(255)",
+      "is_nullable": true
+    },
+    {
+      "column_name": "computer_name",
+      "data_type": "VARCHAR(255)",
+      "is_nullable": true
+    },
+    {
+      "column_name": "operating_system",
+      "data_type": "VARCHAR(255)",
+      "is_nullable": true
+    }
+  ]
+}
+
+
+
+CREATE TABLE ceh_tn_hr_account_data (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255),
+    department VARCHAR(255),
+    schoole VARCHAR(255),
+    computer VARCHAR(255),
+    address VARCHAR(255)
+);
+
+
+{
+  "columns": [
+    {
+      "column_name": "id",
+      "data_type": "SERIAL",
+      "is_nullable": false
+    },
+    {
+      "column_name": "name",
+      "data_type": "VARCHAR(255)",
+      "is_nullable": true
+    },
+    {
+      "column_name": "department",
+      "data_type": "VARCHAR(255)",
+      "is_nullable": true
+    },
+    {
+      "column_name": "schoole",
+      "data_type": "VARCHAR(255)",
+      "is_nullable": true
+    },
+    {
+      "column_name": "computer",
+      "data_type": "VARCHAR(255)",
+      "is_nullable": true
+    },
+    {
+      "column_name": "address",
+      "data_type": "VARCHAR(255)",
+      "is_nullable": true
+    }
+  ]
+}
+
