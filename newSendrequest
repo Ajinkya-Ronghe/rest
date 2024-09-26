@@ -1,0 +1,72 @@
+package com.infy.ceh.management.repository;
+
+import com.infy.ceh.management.util.QueryLoader;
+import org.json.JSONObject;
+import org.postgresql.largeobject.LargeObject;
+import org.postgresql.largeobject.LargeObjectManager;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.stereotype.Repository;
+
+import java.sql.Connection;
+import java.sql.SQLException;
+
+@Repository
+public class RequestRepositoryImpl implements RequestRepository {
+
+    @Autowired
+    private NamedParameterJdbcTemplate namedParameterJdbcTemplate;
+
+    @Autowired
+    private QueryLoader queryLoader;
+
+    @Override
+    public void saveRequest(JSONObject requestBody) throws Exception {
+        try {
+            System.out.println("New cycle started. Processing large JSON data...");
+            
+            // Extracting large JSON data from the request body
+            String jsonData = requestBody.get("json").toString();
+
+            // Insert large JSON data using LargeObjectManager and get the OID
+            long oid = insertLargeJson(namedParameterJdbcTemplate, jsonData);
+
+            // Preparing SQL query
+            String sql = queryLoader.getQuery("saveRequest");
+
+            // Mapping parameters for the SQL query
+            MapSqlParameterSource params = new MapSqlParameterSource()
+                    .addValue("dataType", "json")
+                    .addValue("reqName", requestBody.get("type"))
+                    .addValue("jsonOid", oid)  // Using OID instead of the actual large JSON
+                    .addValue("dataIdentifier", false)
+                    .addValue("status", "P");
+
+            // Executing the SQL query
+            int rowsUpdated = namedParameterJdbcTemplate.update(sql, params);
+            System.out.println("Data inserted successfully. Rows affected: " + rowsUpdated);
+        } catch (Exception e) {
+            System.err.println("Error during saving the request: " + e.getMessage());
+            throw new Exception("Failed to save request", e);
+        }
+    }
+
+    // Method to handle large JSON data using PostgreSQL LargeObjectManager
+    public long insertLargeJson(NamedParameterJdbcTemplate jdbcTemplate, String jsonData) throws SQLException {
+        return jdbcTemplate.getJdbcTemplate().execute((Connection conn) -> {
+            LargeObjectManager lobj = conn.unwrap(Connection.class).getLargeObjectAPI();
+            long oid = lobj.createLO(LargeObjectManager.READ | LargeObjectManager.WRITE);
+            LargeObject obj = lobj.open(oid, LargeObjectManager.WRITE);
+
+            try {
+                // Writing the large JSON data in chunks
+                obj.write(jsonData.getBytes());
+            } finally {
+                obj.close();
+            }
+
+            return oid;  // Returning the OID for storage in the database
+        });
+    }
+}
