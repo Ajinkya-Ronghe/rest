@@ -1,1 +1,30 @@
 ALTER TABLE staging_data ALTER COLUMN json_text_data TYPE jsonb USING json_text_data::jsonb;
+
+
+
+import json
+import random
+import string
+
+# Function to generate a large random string
+def generate_large_string(size_in_mb):
+    size_in_bytes = size_in_mb * 1024 * 1024  # Convert MB to bytes
+    return ''.join(random.choices(string.ascii_letters + string.digits, k=size_in_bytes))
+
+# Function to generate a large JSON file
+def generate_large_json(file_name, size_in_mb):
+    large_data = {
+        "field1": "value1",
+        "field2": "value2",
+        "largeField": generate_large_string(size_in_mb)
+    }
+
+    with open(file_name, 'w') as json_file:
+        json.dump(large_data, json_file)
+
+# Generate 400 MB JSON file
+file_name = "/mnt/data/large_json_400mb.json"
+generate_large_json(file_name, 400)
+
+file_name
+
