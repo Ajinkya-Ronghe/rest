@@ -1,0 +1,60 @@
+import org.postgresql.PGConnection;
+import org.postgresql.largeobject.LargeObject;
+import org.postgresql.largeobject.LargeObjectManager;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Repository;
+import java.sql.Connection;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+@Repository
+public class RequestRepositoryImpl {
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    private static final Logger logger = LoggerFactory.getLogger(RequestRepositoryImpl.class);
+
+    public String retrieveLargeJson(long oid) throws Exception {
+        Connection conn = null;
+        String resultJson = null;
+
+        try {
+            logger.info("Initializing connection for LargeObject retrieval");
+            conn = jdbcTemplate.getDataSource().getConnection();
+            conn.setAutoCommit(false);
+
+            logger.info("Retrieving LargeObject with OID: {}", oid);
+            PGConnection pgConn = conn.unwrap(PGConnection.class);
+            LargeObjectManager lobj = pgConn.getLargeObjectAPI();
+            LargeObject obj = lobj.open(oid, LargeObjectManager.READ);
+
+            logger.info("Reading data from LargeObject...");
+            byte[] buf = new byte[obj.size()];
+            int bytesRead = obj.read(buf, 0, buf.length);
+            obj.close();
+
+            logger.info("Successfully read {} bytes from LargeObject.", bytesRead);
+            resultJson = new String(buf);
+
+            conn.commit();
+            logger.info("Transaction committed successfully.");
+        } catch (Exception e) {
+            logger.error("Error during LargeObject retrieval", e);
+            if (conn != null) {
+                conn.rollback();
+                logger.info("Transaction rolled back due to errors.");
+            }
+            throw new Exception("Failed to retrieve request", e);
+        } finally {
+            if (conn != null) {
+                conn.setAutoCommit(true);
+                conn.close();
+                logger.info("Connection closed and auto-commit restored.");
+            }
+        }
+
+        return resultJson;
+    }
+}
