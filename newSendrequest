@@ -70,3 +70,110 @@ public class RequestRepositoryImpl implements RequestRepository {
         });
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+package com.infy.ceh.management.repository;
+
+import com.infy.ceh.management.util.QueryLoader;
+import org.json.JSONObject;
+import org.postgresql.PGConnection;
+import org.postgresql.largeobject.LargeObject;
+import org.postgresql.largeobject.LargeObjectManager;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
+
+@Repository
+public class RequestRepositoryImpl implements RequestRepository {
+
+    @Autowired
+    private NamedParameterJdbcTemplate namedParameterJdbcTemplate;
+
+    @Autowired
+    private QueryLoader queryLoader;
+
+    @Override
+    @Transactional  // Ensure the method runs within a transaction context
+    public void saveRequest(JSONObject requestBody) throws Exception {
+        Connection conn = null;
+        try {
+            System.out.println("New cycle started. Processing large JSON data...");
+
+            // Extracting large JSON data from the request body
+            String jsonData = requestBody.get("json").toString();
+
+            // Get the connection object from NamedParameterJdbcTemplate
+            conn = namedParameterJdbcTemplate.getJdbcTemplate().getDataSource().getConnection();
+
+            // Disable auto-commit for the connection
+            conn.setAutoCommit(false);
+
+            // Handling large objects requires a PostgreSQL connection
+            PGConnection pgConn = conn.unwrap(PGConnection.class);
+            LargeObjectManager lobj = pgConn.getLargeObjectAPI();
+
+            // Create a new large object
+            long oid = lobj.createLO(LargeObjectManager.READ | LargeObjectManager.WRITE);
+            LargeObject obj = lobj.open(oid, LargeObjectManager.WRITE);
+            obj.write(jsonData.getBytes());
+            obj.close();
+
+            // Preparing SQL query
+            String sql = queryLoader.getQuery("saveRequest");
+
+            // Mapping parameters for the SQL query
+            MapSqlParameterSource params = new MapSqlParameterSource()
+                    .addValue("dataType", "json")
+                    .addValue("reqName", requestBody.get("type"))
+                    .addValue("jsonOid", oid)  // Using OID instead of the actual large JSON
+                    .addValue("dataIdentifier", false)
+                    .addValue("status", "P");
+
+            // Executing the SQL query
+            namedParameterJdbcTemplate.update(sql, params);
+
+            // Commit the transaction to save all changes
+            conn.commit();
+            System.out.println("Data inserted successfully.");
+        } catch (Exception e) {
+            // Rollback the transaction in case of an error
+            if (conn != null) conn.rollback();
+            System.err.println("Error during saving the request: " + e.getMessage());
+            throw new Exception("Failed to save request", e);
+        } finally {
+            if (conn != null) conn.setAutoCommit(true);  // Restore auto-commit mode
+            if (conn != null) conn.close();  // Close the connection
+        }
+    }
+}
+
