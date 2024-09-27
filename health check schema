@@ -1,7 +1,7 @@
 CREATE TABLE computer_details (
     id SERIAL PRIMARY KEY,
-    age INT NOT NULL,
-    count INT NOT NULL,
+    age VARCHAR(255) NOT NULL,
+    count VARCHAR(255) NOT NULL,
     custom_tags VARCHAR(255),
     ipv4_address VARCHAR(255),
     computer_name VARCHAR(255),
@@ -10,11 +10,12 @@ CREATE TABLE computer_details (
     patch_deployment_errors JSON,
     tanium_client_core_health VARCHAR(255),
     days_since_successful_scan VARCHAR(255),
-    patch_is_process_running VARCHAR(50),
+    patch_is_process_running VARCHAR(255),
     patch_coverage_status_details JSON,
     client_health_tanium_client_version VARCHAR(255),
-    patch_has_enforced_scan_configuration VARCHAR(50)
+    patch_has_enforced_scan_configuration VARCHAR(255)
 );
+
 
 
 {
@@ -22,37 +23,37 @@ CREATE TABLE computer_details (
     {
       "column_name": "age",
       "field_name": "Age",
-      "data_type": "INTEGER",
+      "data_type": "VARCHAR",
       "is_nullable": false
     },
     {
       "column_name": "count",
       "field_name": "Count",
-      "data_type": "INTEGER",
+      "data_type": "VARCHAR",
       "is_nullable": false
     },
     {
       "column_name": "custom_tags",
       "field_name": "Custom Tags",
-      "data_type": "VARCHAR(255)",
+      "data_type": "VARCHAR",
       "is_nullable": true
     },
     {
       "column_name": "ipv4_address",
       "field_name": "IPv4 Address",
-      "data_type": "VARCHAR(255)",
+      "data_type": "VARCHAR",
       "is_nullable": true
     },
     {
       "column_name": "computer_name",
       "field_name": "Computer Name",
-      "data_type": "VARCHAR(255)",
+      "data_type": "VARCHAR",
       "is_nullable": true
     },
     {
       "column_name": "operating_system",
       "field_name": "Operating System",
-      "data_type": "VARCHAR(255)",
+      "data_type": "VARCHAR",
       "is_nullable": true
     },
     {
@@ -70,19 +71,19 @@ CREATE TABLE computer_details (
     {
       "column_name": "tanium_client_core_health",
       "field_name": "Tanium Client Core Health",
-      "data_type": "VARCHAR(255)",
+      "data_type": "VARCHAR",
       "is_nullable": true
     },
     {
       "column_name": "days_since_successful_scan",
       "field_name": "Days Since Successful Scan",
-      "data_type": "VARCHAR(255)",
+      "data_type": "VARCHAR",
       "is_nullable": true
     },
     {
       "column_name": "patch_is_process_running",
       "field_name": "Patch - Is Process Running",
-      "data_type": "VARCHAR(50)",
+      "data_type": "VARCHAR",
       "is_nullable": true
     },
     {
@@ -94,13 +95,13 @@ CREATE TABLE computer_details (
     {
       "column_name": "client_health_tanium_client_version",
       "field_name": "Client Health - Tanium Client Version",
-      "data_type": "VARCHAR(255)",
+      "data_type": "VARCHAR",
       "is_nullable": true
     },
     {
       "column_name": "patch_has_enforced_scan_configuration",
       "field_name": "Patch - Has Enforced Scan Configuration",
-      "data_type": "VARCHAR(50)",
+      "data_type": "VARCHAR",
       "is_nullable": true
     }
   ]
