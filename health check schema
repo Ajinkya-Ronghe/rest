@@ -1,0 +1,108 @@
+CREATE TABLE computer_details (
+    id SERIAL PRIMARY KEY,
+    age INT NOT NULL,
+    count INT NOT NULL,
+    custom_tags VARCHAR(255),
+    ipv4_address VARCHAR(255),
+    computer_name VARCHAR(255),
+    operating_system VARCHAR(255),
+    patch_scan_errors JSON,
+    patch_deployment_errors JSON,
+    tanium_client_core_health VARCHAR(255),
+    days_since_successful_scan VARCHAR(255),
+    patch_is_process_running VARCHAR(50),
+    patch_coverage_status_details JSON,
+    client_health_tanium_client_version VARCHAR(255),
+    patch_has_enforced_scan_configuration VARCHAR(50)
+);
+
+
+{
+  "columns": [
+    {
+      "column_name": "age",
+      "field_name": "Age",
+      "data_type": "INTEGER",
+      "is_nullable": false
+    },
+    {
+      "column_name": "count",
+      "field_name": "Count",
+      "data_type": "INTEGER",
+      "is_nullable": false
+    },
+    {
+      "column_name": "custom_tags",
+      "field_name": "Custom Tags",
+      "data_type": "VARCHAR(255)",
+      "is_nullable": true
+    },
+    {
+      "column_name": "ipv4_address",
+      "field_name": "IPv4 Address",
+      "data_type": "VARCHAR(255)",
+      "is_nullable": true
+    },
+    {
+      "column_name": "computer_name",
+      "field_name": "Computer Name",
+      "data_type": "VARCHAR(255)",
+      "is_nullable": true
+    },
+    {
+      "column_name": "operating_system",
+      "field_name": "Operating System",
+      "data_type": "VARCHAR(255)",
+      "is_nullable": true
+    },
+    {
+      "column_name": "patch_scan_errors",
+      "field_name": "Patch - Scan Errors",
+      "data_type": "JSON",
+      "is_nullable": true
+    },
+    {
+      "column_name": "patch_deployment_errors",
+      "field_name": "Patch - Deployment Errors",
+      "data_type": "JSON",
+      "is_nullable": true
+    },
+    {
+      "column_name": "tanium_client_core_health",
+      "field_name": "Tanium Client Core Health",
+      "data_type": "VARCHAR(255)",
+      "is_nullable": true
+    },
+    {
+      "column_name": "days_since_successful_scan",
+      "field_name": "Days Since Successful Scan",
+      "data_type": "VARCHAR(255)",
+      "is_nullable": true
+    },
+    {
+      "column_name": "patch_is_process_running",
+      "field_name": "Patch - Is Process Running",
+      "data_type": "VARCHAR(50)",
+      "is_nullable": true
+    },
+    {
+      "column_name": "patch_coverage_status_details",
+      "field_name": "Patch - Coverage Status Details",
+      "data_type": "JSON",
+      "is_nullable": true
+    },
+    {
+      "column_name": "client_health_tanium_client_version",
+      "field_name": "Client Health - Tanium Client Version",
+      "data_type": "VARCHAR(255)",
+      "is_nullable": true
+    },
+    {
+      "column_name": "patch_has_enforced_scan_configuration",
+      "field_name": "Patch - Has Enforced Scan Configuration",
+      "data_type": "VARCHAR(50)",
+      "is_nullable": true
+    }
+  ]
+}
+
