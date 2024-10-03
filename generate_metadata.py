@@ -116,12 +116,13 @@ def process_json_file(input_file, output_file):
     # Generate the insert query
     insert_query = generate_insert_query(array_name, metadata, table_name, json_object)
     
-    # Write the SQL query, insert query, and commit to the output file
+    # Write the SQL transaction to the output file
     with open(output_file, 'w') as file:
+        file.write("START TRANSACTION;\n")  # Start the transaction
         file.write(sql_query)
         file.write("\n")
         file.write(insert_query)
-        file.write("\nCOMMIT;\n")  # Add the commit statement
+        file.write("\nCOMMIT;\n")  # Commit the transaction
 
 if __name__ == "__main__":
     # Define input and output file paths
