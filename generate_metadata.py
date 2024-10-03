@@ -10,8 +10,13 @@ def clean_table_name(array_name):
     return re.sub(r'[^a-zA-Z0-9_]', '_', array_name).lower()
 
 def generate_sql_query_and_metadata(json_object, array_name):
-    # Dynamically form the table name by cleaning the array name, but keep "esh_main." intact
-    table_name = f"esh_main.ceh_tn_{clean_table_name(array_name)}"
+    # Clean the array name for use as the table name
+    cleaned_table_name = clean_table_name(array_name)
+    table_name = f"esh_main.ceh_tn_{cleaned_table_name}"
+    
+    # Generate the primary and foreign key constraint names dynamically
+    primary_key_constraint = f"{cleaned_table_name}_pkey"
+    foreign_key_constraint = f"{cleaned_table_name}_fkey"
     
     # Start forming the SQL query
     sql_query = f"CREATE TABLE IF NOT EXISTS {table_name} (\n"
@@ -35,22 +40,23 @@ def generate_sql_query_and_metadata(json_object, array_name):
         # Add column to SQL query
         sql_query += f"    {column_name} {data_type} NULL,\n"
         
-        # Add to metadata
-        metadata['columns'].append({
-            "column_name": column_name,
-            "field_name": key,
-            "data_type": data_type,
-            "is_nullable": True  # Assuming all fields are nullable
-        })
+        # Add to metadata, skip the auto-increment id field
+        if column_name != "id":
+            metadata['columns'].append({
+                "column_name": column_name,
+                "field_name": key,
+                "data_type": data_type,
+                "is_nullable": True  # Assuming all fields are nullable
+            })
     
     # Append hardcoded fields (staging_id, bank_id as integer, and id as bigserial)
-    sql_query += """
+    sql_query += f"""
     id bigserial NOT NULL,
     staging_id integer NULL,
     bank_id integer NULL,
     batch_id integer NULL,
-    CONSTRAINT ceh_tn_pkey PRIMARY KEY (id),
-    CONSTRAINT staging_id FOREIGN KEY (staging_id)
+    CONSTRAINT {primary_key_constraint} PRIMARY KEY (id),
+    CONSTRAINT {foreign_key_constraint} FOREIGN KEY (staging_id)
         REFERENCES esh_main.ceh_api_staging_data (id)
         ON UPDATE NO ACTION
         ON DELETE NO ACTION
@@ -58,14 +64,8 @@ def generate_sql_query_and_metadata(json_object, array_name):
     );
     """
     
-    # Add hardcoded columns to metadata
+    # Add hardcoded columns to metadata (excluding 'id')
     metadata['columns'].extend([
-        {
-            "column_name": "id",
-            "field_name": "id",
-            "data_type": "bigserial",
-            "is_nullable": False
-        },
         {
             "column_name": "staging_id",
             "field_name": "staging_id",
@@ -116,11 +116,12 @@ def process_json_file(input_file, output_file):
     # Generate the insert query
     insert_query = generate_insert_query(array_name, metadata, table_name, json_object)
     
-    # Write the SQL query and insert query to the output file
+    # Write the SQL query, insert query, and commit to the output file
     with open(output_file, 'w') as file:
         file.write(sql_query)
         file.write("\n")
         file.write(insert_query)
+        file.write("\nCOMMIT;\n")  # Add the commit statement
 
 if __name__ == "__main__":
     # Define input and output file paths
