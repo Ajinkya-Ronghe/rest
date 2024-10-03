@@ -5,9 +5,13 @@ def clean_column_name(column_name):
     # Replace special characters with underscore and convert to lowercase
     return re.sub(r'[^a-zA-Z0-9_]', '_', column_name).lower()
 
+def clean_table_name(table_name):
+    # Replace special characters with underscore and convert to lowercase
+    return re.sub(r'[^a-zA-Z0-9_]', '_', table_name).lower()
+
 def generate_sql_query_and_metadata(json_object, array_name):
-    # Dynamically form the table name based on array_name
-    table_name = f"esh_main.ceh_tn_{array_name.replace(' ', '_').lower()}"
+    # Clean the array name for use as the table name
+    table_name = clean_table_name(f"esh_main.ceh_tn_{array_name}")
     
     # Start forming the SQL query
     sql_query = f"CREATE TABLE IF NOT EXISTS {table_name} (\n"
