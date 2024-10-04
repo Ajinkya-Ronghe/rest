@@ -77,6 +77,22 @@ def generate_sql_query_and_metadata(json_object, array_name):
     );
     """
     
+    # Add hardcoded columns to metadata (including 'staging_id' but excluding 'id' and 'created_time')
+    metadata['columns'].extend([
+        {
+            "column_name": "staging_id",
+            "field_name": "staging_id",
+            "data_type": "integer",
+            "is_nullable": True
+        },
+        {
+            "column_name": "batch_id",
+            "field_name": "batch_id",
+            "data_type": "integer",
+            "is_nullable": True
+        }
+    ])
+    
     # Add bank_id to metadata if it's included
     if bank_id_included:
         metadata['columns'].append({
