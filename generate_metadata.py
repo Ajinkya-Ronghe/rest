@@ -42,7 +42,7 @@ def generate_sql_query_and_metadata(json_object, array_name):
         sql_query += f"    {column_name} {data_type} NULL,\n"
         
         # Add to metadata, skip the auto-increment id field
-        if column_name != "id":
+        if column_name != "id" and column_name != "created_time":
             metadata['columns'].append({
                 "column_name": column_name,
                 "field_name": key,
@@ -54,12 +54,20 @@ def generate_sql_query_and_metadata(json_object, array_name):
         if key == "Custom Tags":
             bank_id_included = True
     
-    # Append hardcoded fields (staging_id and id as bigserial)
+    # Append hardcoded fields (staging_id, id as bigserial, and created_time)
     sql_query += f"""
     id bigserial NOT NULL,
     staging_id integer NULL,
     batch_id integer NULL,
     created_time timestamp without time zone NULL,
+    """
+    
+    # Add bank_id if "Custom Tags" field is present
+    if bank_id_included:
+        sql_query += "    bank_id integer NULL,\n"
+
+    # Finalize the table definition with primary and foreign key constraints
+    sql_query += f"""
     CONSTRAINT {primary_key_constraint} PRIMARY KEY (id),
     CONSTRAINT {foreign_key_constraint} FOREIGN KEY (staging_id)
         REFERENCES esh_main.ceh_api_staging_data (id)
@@ -69,31 +77,8 @@ def generate_sql_query_and_metadata(json_object, array_name):
     );
     """
     
-    # Add hardcoded columns to metadata (excluding 'id')
-    metadata['columns'].extend([
-        {
-            "column_name": "staging_id",
-            "field_name": "staging_id",
-            "data_type": "integer",
-            "is_nullable": True
-        },
-        {
-            "column_name": "batch_id",
-            "field_name": "batch_id",
-            "data_type": "integer",
-            "is_nullable": True
-        },
-        {
-            "column_name": "created_time",
-            "field_name": "created_time",
-            "data_type": "timestamp without time zone",
-            "is_nullable": True
-        }
-    ])
-    
-    # Add bank_id if "Custom Tags" field is present
+    # Add bank_id to metadata if it's included
     if bank_id_included:
-        sql_query += "    bank_id integer NULL,\n"
         metadata['columns'].append({
             "column_name": "bank_id",
             "field_name": "bank_id",
