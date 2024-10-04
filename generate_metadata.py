@@ -26,6 +26,7 @@ def generate_sql_query_and_metadata(json_object, array_name):
     first_item = json_object[0]
     
     # Add fields from the JSON object
+    bank_id_included = False  # Track if "Custom Tags" field is present
     for key, value in first_item.items():
         column_name = clean_column_name(key)  # Clean the column name
         
@@ -48,13 +49,17 @@ def generate_sql_query_and_metadata(json_object, array_name):
                 "data_type": data_type,
                 "is_nullable": True  # Assuming all fields are nullable
             })
+        
+        # If "Custom Tags" field is present, mark bank_id to be included
+        if key == "Custom Tags":
+            bank_id_included = True
     
-    # Append hardcoded fields (staging_id, bank_id as integer, and id as bigserial)
+    # Append hardcoded fields (staging_id and id as bigserial)
     sql_query += f"""
     id bigserial NOT NULL,
     staging_id integer NULL,
-    bank_id integer NULL,
     batch_id integer NULL,
+    created_time timestamp without time zone NULL,
     CONSTRAINT {primary_key_constraint} PRIMARY KEY (id),
     CONSTRAINT {foreign_key_constraint} FOREIGN KEY (staging_id)
         REFERENCES esh_main.ceh_api_staging_data (id)
@@ -73,18 +78,28 @@ def generate_sql_query_and_metadata(json_object, array_name):
             "is_nullable": True
         },
         {
-            "column_name": "bank_id",
-            "field_name": "bank_id",
-            "data_type": "integer",
-            "is_nullable": True
-        },
-        {
             "column_name": "batch_id",
             "field_name": "batch_id",
             "data_type": "integer",
             "is_nullable": True
+        },
+        {
+            "column_name": "created_time",
+            "field_name": "created_time",
+            "data_type": "timestamp without time zone",
+            "is_nullable": True
         }
     ])
+    
+    # Add bank_id if "Custom Tags" field is present
+    if bank_id_included:
+        sql_query += "    bank_id integer NULL,\n"
+        metadata['columns'].append({
+            "column_name": "bank_id",
+            "field_name": "bank_id",
+            "data_type": "integer",
+            "is_nullable": True
+        })
     
     return sql_query, metadata, table_name
 
