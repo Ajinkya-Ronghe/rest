@@ -19,8 +19,9 @@ def generate_sql_query_and_metadata(json_object, array_name):
     primary_key_constraint = f"{cleaned_table_name}_pkey"
     foreign_key_constraint = f"{cleaned_table_name}_fkey"
     
-    # Start forming the SQL query
-    sql_query = f"CREATE TABLE IF NOT EXISTS {table_name} (\n"
+    # Start forming the SQL query with a commented line for dropping the table
+    sql_query = f"-- DROP TABLE IF EXISTS {table_name};\n"
+    sql_query += f"CREATE TABLE IF NOT EXISTS {table_name} (\n"
     metadata = {"columns": []}  # Initialize the metadata structure
     
     # Get the first object from the JSON array
