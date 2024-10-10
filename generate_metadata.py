@@ -2,12 +2,13 @@ import json
 import re
 
 def clean_column_name(column_name):
-    # Replace special characters with underscore and convert to lowercase
-    return re.sub(r'[^a-zA-Z0-9_]', '_', column_name).lower()
+    # Strip leading/trailing spaces, replace multiple spaces or special characters with a single underscore, and convert to lowercase
+    column_name = column_name.strip()
+    return re.sub(r'[^a-zA-Z0-9]+', '_', column_name).lower()
 
-def clean_table_name(array_name):
-    # Replace special characters in the array name with underscore and convert to lowercase
-    return re.sub(r'[^a-zA-Z0-9_]', '_', array_name).lower()
+def clean_table_name(table_name):
+    # Replace multiple special characters and hyphens with a single underscore and convert to lowercase
+    return re.sub(r'[^a-zA-Z0-9]+', '_', table_name).lower()
 
 def generate_sql_query_and_metadata(json_object, array_name):
     # Clean the array name for use as the table name
