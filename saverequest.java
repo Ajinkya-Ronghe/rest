@@ -1,4 +1,4 @@
-private long getNextBatchId(String requestType, long currentTime, boolean isBatchEnabled) {
+private synchronized long getNextBatchId(String requestType, long currentTime, boolean isBatchEnabled) {
     if (isBatchEnabled) {
         long lastRequestTime = lastRequestTimes.getOrDefault(requestType, 0L);
 
