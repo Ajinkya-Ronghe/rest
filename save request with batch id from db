@@ -1,0 +1,72 @@
+@Override
+public void saveRequest(JSONObject requestBody) throws Exception {
+    Connection conn = null;
+    try {
+        conn = jdbcTemplate.getDataSource().getConnection();
+        conn.setAutoCommit(false);
+
+        // Get batch metadata and check if the request is a batch type
+        String metadataTypeQuery = "SELECT batch FROM metadata_type WHERE type = :reqType";
+        MapSqlParameterSource metadataParams = new MapSqlParameterSource().addValue("reqType", requestBody.get("type"));
+        Boolean isBatchType = namedParameterJdbcTemplate.queryForObject(metadataTypeQuery, metadataParams, Boolean.class);
+
+        int batchId = 0;
+        if (isBatchType != null && isBatchType) {
+            // Fetch or increment batch_id in a separate method
+            batchId = getNextBatchId(requestBody.get("type").toString());
+        }
+
+        // Insert data into staging_data
+        String sql = queryLoader.getQuery("saveRequest");
+        MapSqlParameterSource params = new MapSqlParameterSource()
+                .addValue("dataType", "json")
+                .addValue("reqName", requestBody.get("type"))
+                .addValue("jsonTextData", requestBody.get("json").toString())
+                .addValue("dataIdentifier", false)
+                .addValue("status", "P")
+                .addValue("batchId", batchId);  // Add the batchId to the query
+
+        int rowsUpdated = namedParameterJdbcTemplate.update(sql, params);
+
+        conn.commit();  // Commit the transaction
+        logger.info("Data inserted successfully. Rows affected: " + rowsUpdated);
+    } catch (Exception e) {
+        if (conn != null) {
+            conn.rollback();
+        }
+        logger.error("Error during saving the request: " + e.getMessage());
+        throw new Exception("Failed to save request", e);
+    } finally {
+        if (conn != null) {
+            conn.setAutoCommit(true);
+            conn.close();
+        }
+    }
+}
+
+
+
+
+
+
+
+
+private int getNextBatchId(String requestType) throws Exception {
+    try {
+        // Fetch max batch_id from the staging_data table for this type
+        String maxBatchQuery = "SELECT COALESCE(MAX(batch_id), 0) FROM staging_data WHERE req_name = :reqType";
+        MapSqlParameterSource params = new MapSqlParameterSource().addValue("reqType", requestType);
+        int currentBatchId = namedParameterJdbcTemplate.queryForObject(maxBatchQuery, params, Integer.class);
+
+        // Increment the batch_id
+        int nextBatchId = currentBatchId + 1;
+        logger.info("Generated new batch ID: {}", nextBatchId);
+
+        return nextBatchId;
+    } catch (Exception e) {
+        logger.error("Error fetching next batch ID", e);
+        throw new Exception("Failed to get next batch ID", e);
+    }
+}
+
+
