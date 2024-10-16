@@ -1,0 +1,26 @@
+
+1. **Every 15 minutes, starting at 30 minutes past the hour (UTC):**
+   ```
+   30/15 * * * *
+   ```
+
+2. **At 50 minutes past the hour (UTC):**
+   ```
+   50 * * * *
+   ```
+
+3. **Every 15 minutes, starting at 30 minutes past the hour (UTC):**
+   (This is the same as the first expression)
+   ```
+   30/15 * * * *
+   ```
+
+4. **Every hour (UTC):**
+   ```
+   0 * * * *
+   ```
+
+5. **Every 20 minutes, starting at 20 minutes past the hour (GMT):**
+   ```
+   20/20 * * * *
+   ```
