@@ -1,0 +1,35 @@
+WITH cpu_calculation AS (
+    SELECT 
+        custom_tags,
+        computer_name,
+        cpu_consumption,
+        processor_cores,
+        process,
+        (cpu_consumption / (processor_cores * 100)) * 100 AS cpu_percentage,
+        (processor_cores * 100) - cpu_consumption AS total_cpu_available
+    FROM 
+        cpu_data
+)
+SELECT 
+    custom_tags,
+    computer_name,
+    cpu_consumption,
+    processor_cores,
+    process,
+    total_cpu_available,
+    cpu_percentage
+FROM 
+    cpu_calculation
+WHERE 
+    cpu_percentage >= 90
+GROUP BY 
+    custom_tags, 
+    computer_name, 
+    cpu_consumption, 
+    processor_cores, 
+    process, 
+    total_cpu_available, 
+    cpu_percentage
+ORDER BY 
+    custom_tags, 
+    computer_name;
