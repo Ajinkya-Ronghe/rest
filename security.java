@@ -38,7 +38,10 @@ public class SecurityConfig {
             .authorizeRequests()
                 .anyRequest().authenticated()  // Require authentication for all requests
                 .and()
-            .httpBasic();  // Use basic authentication
+            .httpBasic()  // Use basic authentication
+            .and()
+            .sessionManagement()
+                .sessionCreationPolicy(SessionCreationPolicy.STATELESS);  // Disable session creation
 
         return http.build();
     }
