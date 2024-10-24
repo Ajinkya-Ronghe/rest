@@ -4,6 +4,8 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 
@@ -12,25 +14,32 @@ public class SecurityConfig {
 
     // Define an in-memory user with username, password, and roles
     @Bean
-    public UserDetailsService userDetailsService() {
-        UserDetails user = User.withDefaultPasswordEncoder()
+    public UserDetailsService userDetailsService(PasswordEncoder passwordEncoder) {
+        UserDetails user = User.builder()
                 .username("user")
-                .password("password")
+                .password(passwordEncoder.encode("password"))  // Properly encode the password
                 .roles("USER")
                 .build();
-        
+
         return new InMemoryUserDetailsManager(user);
+    }
+
+    // Password encoder bean
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();  // Use BCryptPasswordEncoder
     }
 
     // Configure security for all HTTP requests
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
+            .csrf().disable()  // Disable CSRF protection for APIs
             .authorizeRequests()
                 .anyRequest().authenticated()  // Require authentication for all requests
                 .and()
-            .httpBasic();  // Use basic authentication (username and password in the browser popup)
-        
+            .httpBasic();  // Use basic authentication
+
         return http.build();
     }
 }
