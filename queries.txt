@@ -19,3 +19,67 @@ GROUP BY
     ci_item_os_version, 
     ci_item_serial_number, 
     ci_item_user_name;
+
+
+
+
+
+
+
+
+
+
+
+WITH base_data AS (
+    SELECT 
+        ci_item_computer_name AS "Computer Name",
+        ci_item_domain_name AS "Domain Name",
+        ci_item_ip_address AS "IP Address",
+        ci_item_model AS "Model",
+        ci_item_operating_system AS "Operating System",
+        ci_item_chassis_type AS "Chassis Type",
+        ci_item_serial_number AS "Serial Number",
+        ci_item_user_name AS "User Name",
+        NOW() AS timenow,
+        ci_item_last_seen_at AS "Last Seen"
+    FROM esh_main.ceh_tn_asset_report_fs_hardware_inventory_report
+    WHERE ci_item_computer_name IS NOT NULL
+),
+converted_data AS (
+    SELECT
+        "Computer Name",
+        "Domain Name",
+        "IP Address",
+        "Model",
+        "Operating System",
+        "Chassis Type",
+        "Serial Number",
+        "User Name",
+        timenow,
+        to_char(timenow, 'MM/DD/YYYY') AS "ConvertedTimeNow",
+        timenow + interval '30 days' AS futuretime,
+        to_char(timenow + interval '30 days', 'MM/DD/YYYY') AS "Converted14Days",
+        to_timestamp("Last Seen", 'YYYY-MM-DD') AS ConvertedLastSeen,
+        to_char(to_timestamp("Last Seen", 'YYYY-MM-DD'), 'MM/DD/YYYY') AS "Last Seen Formatted"
+    FROM base_data
+),
+filtered_data AS (
+    SELECT *
+    FROM converted_data
+    WHERE ConvertedLastSeen <= futuretime
+)
+SELECT 
+    "Computer Name",
+    COUNT(*) AS count
+FROM filtered_data
+GROUP BY "Computer Name"
+UNION ALL
+SELECT 'totalCount' AS "Computer Name", SUM(count)
+FROM (
+    SELECT 
+        "Computer Name",
+        COUNT(*) AS count
+    FROM filtered_data
+    GROUP BY "Computer Name"
+) AS grouped_counts;
+
