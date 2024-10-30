@@ -1,0 +1,434 @@
+1. Removing Duplicates
+Splunk:
+spl
+Copy code
+| dedup ci_item_computer_name
+PostgreSQL Equivalent:
+In PostgreSQL, we can achieve the same deduplication by using the DISTINCT clause, or ensuring that we group by the ci_item_computer_name.
+
+sql
+Copy code
+SELECT DISTINCT ci_item_computer_name
+FROM esh_main.ceh_tn_asset_report_fs_hardware_inventory_report;
+Purpose: Removes duplicate rows based on the ci_item_computer_name column.
+2. Renaming Fields
+Splunk:
+spl
+Copy code
+| rename 
+    ci_item_computer_name AS "Computer Name", 
+    ci_item_chassis_type AS "Chassis Type", 
+    ci_custom_tag_custom_tag AS "Custom Tags", 
+    ci_item_domain_name AS "Domain Name", 
+    ci_item_ip_address AS "IP Address", 
+    ci_item_model AS "Model", 
+    ci_item_operating_system AS "Operating System", 
+    ci_item_os_version AS "OS Version", 
+    ci_item_serial_number AS "Serial Number", 
+    ci_item_user_name AS "User Name"
+PostgreSQL Equivalent:
+In SQL, you rename fields using the AS keyword within the SELECT statement.
+
+sql
+Copy code
+SELECT 
+    ci_item_computer_name AS "Computer Name",
+    ci_item_chassis_type AS "Chassis Type",
+    ci_custom_tag_custom_tag AS "Custom Tags",
+    ci_item_domain_name AS "Domain Name",
+    ci_item_ip_address AS "IP Address",
+    ci_item_model AS "Model",
+    ci_item_operating_system AS "Operating System",
+    ci_item_os_version AS "OS Version",
+    ci_item_serial_number AS "Serial Number",
+    ci_item_user_name AS "User Name"
+FROM esh_main.ceh_tn_asset_report_fs_hardware_inventory_report;
+Purpose: This renames columns to more readable names when selecting data.
+3. Getting the Current Timestamp
+Splunk:
+spl
+Copy code
+| eval timenow=now()
+PostgreSQL Equivalent:
+In PostgreSQL, you can use the NOW() function to get the current timestamp.
+
+sql
+Copy code
+SELECT 
+    NOW() AS "timenow"
+FROM esh_main.ceh_tn_asset_report_fs_hardware_inventory_report;
+Purpose: Fetches the current timestamp (date and time).
+4. Formatting the Current Timestamp
+Splunk:
+spl
+Copy code
+| convert timeformat="%m/%d/%Y" ctime(timenow) AS "ConvertedTimeNow"
+PostgreSQL Equivalent:
+In PostgreSQL, use the TO_CHAR() function to format the timestamp into the MM/DD/YYYY format.
+
+sql
+Copy code
+SELECT 
+    TO_CHAR(NOW(), 'MM/DD/YYYY') AS "ConvertedTimeNow"
+FROM esh_main.ceh_tn_asset_report_fs_hardware_inventory_report;
+Purpose: Formats the current timestamp (NOW()) into a readable MM/DD/YYYY format.
+5. Calculating a Future Timestamp (30 Days Later)
+Splunk:
+spl
+Copy code
+| eval futuretime = timenow + 2592000
+PostgreSQL Equivalent:
+In PostgreSQL, you can add a time interval to a timestamp by using INTERVAL.
+
+sql
+Copy code
+SELECT 
+    NOW() + INTERVAL '30 days' AS "futuretime"
+FROM esh_main.ceh_tn_asset_report_fs_hardware_inventory_report;
+Purpose: Adds 30 days to the current time to calculate a future timestamp.
+6. Formatting the Future Timestamp
+Splunk:
+spl
+Copy code
+| convert timeformat="%m/%d/%Y" ctime(futuretime) AS "Converted14Days"
+PostgreSQL Equivalent:
+You can use TO_CHAR to format the calculated future timestamp in PostgreSQL.
+
+sql
+Copy code
+SELECT 
+    TO_CHAR(NOW() + INTERVAL '30 days', 'MM/DD/YYYY') AS "Converted14Days"
+FROM esh_main.ceh_tn_asset_report_fs_hardware_inventory_report;
+Purpose: Formats the future timestamp (30 days from now) into a readable MM/DD/YYYY format.
+7. Parsing and Converting the "Last Seen" Field
+Splunk:
+spl
+Copy code
+| eval ConvertedLastSeen=strptime(ci_item_last_seen_at,"%Y-%m-%d")
+PostgreSQL Equivalent:
+PostgreSQL already stores dates as timestamps, so there's no need for strptime. If your ci_item_last_seen_at is already in YYYY-MM-DD format, you can convert it directly using TO_TIMESTAMP:
+
+sql
+Copy code
+SELECT 
+    TO_TIMESTAMP(ci_item_last_seen_at, 'YYYY-MM-DD') AS "ConvertedLastSeen"
+FROM esh_main.ceh_tn_asset_report_fs_hardware_inventory_report;
+Purpose: Converts the string representation of the ci_item_last_seen_at date into a timestamp.
+8. Formatting the "Last Seen" Timestamp
+Splunk:
+spl
+Copy code
+| eval LastSeen=strftime(ConvertedLastSeen,"%m/%d/%Y")
+PostgreSQL Equivalent:
+You can format the converted timestamp using TO_CHAR in PostgreSQL:
+
+sql
+Copy code
+SELECT 
+    TO_CHAR(TO_TIMESTAMP(ci_item_last_seen_at, 'YYYY-MM-DD'), 'MM/DD/YYYY') AS "Last Seen"
+FROM esh_main.ceh_tn_asset_report_fs_hardware_inventory_report;
+Purpose: Converts and formats the ci_item_last_seen_at timestamp into a MM/DD/YYYY format.
+9. Filtering Records Based on the "Last Seen" Date
+Splunk:
+spl
+Copy code
+| where ConvertedLastSeen <= futuretime
+PostgreSQL Equivalent:
+You can apply a WHERE clause to filter records based on the ConvertedLastSeen timestamp being less than or equal to the futuretime:
+
+sql
+Copy code
+SELECT 
+    TO_TIMESTAMP(ci_item_last_seen_at, 'YYYY-MM-DD') AS "ConvertedLastSeen"
+FROM esh_main.ceh_tn_asset_report_fs_hardware_inventory_report
+WHERE TO_TIMESTAMP(ci_item_last_seen_at, 'YYYY-MM-DD') <= NOW() + INTERVAL '30 days';
+Purpose: Filters records where the ci_item_last_seen_at timestamp is within the past 30 days.
+10. Displaying Specific Fields in a Table
+Splunk:
+spl
+Copy code
+| table 
+    Computer Name, 
+    Domain Name, 
+    IP Address, 
+    Operating System, 
+    Model, 
+    Chassis Type, 
+    Serial Number, 
+    Last Seen, 
+    User Name
+PostgreSQL Equivalent:
+In PostgreSQL, you select the fields you want to display:
+
+sql
+Copy code
+SELECT 
+    ci_item_computer_name AS "Computer Name",
+    ci_item_domain_name AS "Domain Name",
+    ci_item_ip_address AS "IP Address",
+    ci_item_operating_system AS "Operating System",
+    ci_item_model AS "Model",
+    ci_item_chassis_type AS "Chassis Type",
+    ci_item_serial_number AS "Serial Number",
+    TO_CHAR(TO_TIMESTAMP(ci_item_last_seen_at, 'YYYY-MM-DD'), 'MM/DD/YYYY') AS "Last Seen",
+    ci_item_user_name AS "User Name"
+FROM esh_main.ceh_tn_asset_report_fs_hardware_inventory_report;
+Purpose: Displays the selected fields in a query result.
+11. Counting Records by "Computer Name"
+Splunk:
+spl
+Copy code
+| stats count by Computer Name
+PostgreSQL Equivalent:
+In PostgreSQL, we can group by the ci_item_computer_name and count the records:
+
+sql
+Copy code
+SELECT 
+    ci_item_computer_name AS "Computer Name",
+    COUNT(*) AS "count"
+FROM esh_main.ceh_tn_asset_report_fs_hardware_inventory_report
+GROUP BY ci_item_computer_name;
+Purpose: Counts the number of records for each unique ci_item_computer_name.
+12. Calculating the Total Count of Records
+Splunk:
+spl
+Copy code
+| stats sum(count) as totalCount
+PostgreSQL Equivalent:
+You can calculate the total count by summing up the counts from the previous step:
+
+sql
+Copy code
+SELECT 
+    SUM("count") AS "totalCount"
+FROM (
+    SELECT 
+        ci_item_computer_name AS "Computer Name",
+        COUNT(*) AS "count"
+    FROM esh_main.ceh_tn_asset_report_fs_hardware_inventory_report
+    GROUP BY ci_item_computer_name
+) AS subquery;
+Purpose: Sums up the counts to get the total number of records.
+13. Displaying the Total Count in a Table
+Splunk:
+spl
+Copy code
+| table totalCount
+PostgreSQL Equivalent:
+You can select the total count field from the subquery:
+
+sql
+Copy code
+SELECT 
+    SUM("count") AS "totalCount"
+FROM (
+    SELECT 
+        ci_item_computer_name AS "Computer Name",
+        COUNT(*) AS "count"
+    FROM esh_main.ceh_tn_asset_report_fs_hardware_inventory_report
+    GROUP BY ci_item_computer_name
+) AS subquery;
+Purpose: Displays the total count of records in a table format.
+By following this step-by-step approach, we can successfully convert each part of the Splunk query into an equivalent PostgreSQL query. Let me know if you need further assistance or clarification on any part!
+
+
+
+
+
+
+You said:
+can you step by step combine this to form one querry?
+ChatGPT said:
+ChatGPT
+Absolutely! Let's combine each part step by step to form one complete PostgreSQL query. We'll go through the process of merging each individual part of the query into a single SQL statement that mirrors the functionality of your original Splunk query.
+
+Step 1: Basic SELECT with Field Renaming and Deduplication
+We start by selecting the required fields, renaming them as needed, and ensuring we remove duplicates.
+
+sql
+Copy code
+SELECT DISTINCT 
+    ci_item_computer_name AS "Computer Name",
+    ci_item_chassis_type AS "Chassis Type",
+    ci_custom_tag_custom_tag AS "Custom Tags",
+    ci_item_domain_name AS "Domain Name",
+    ci_item_ip_address AS "IP Address",
+    ci_item_model AS "Model",
+    ci_item_operating_system AS "Operating System",
+    ci_item_os_version AS "OS Version",
+    ci_item_serial_number AS "Serial Number",
+    ci_item_user_name AS "User Name"
+FROM esh_main.ceh_tn_asset_report_fs_hardware_inventory_report
+WHERE ci_item_computer_name IS NOT NULL;
+What's happening:
+We're selecting the fields and renaming them.
+The DISTINCT clause ensures there are no duplicate ci_item_computer_name values.
+We also filter out records with NULL values in ci_item_computer_name.
+Step 2: Add Current Time (timenow) and Future Time (30 Days Later)
+We add two calculated fields: one for the current time (timenow) and one for the future time (30 days from now).
+
+sql
+Copy code
+WITH base_data AS (
+    SELECT DISTINCT 
+        ci_item_computer_name AS "Computer Name",
+        ci_item_chassis_type AS "Chassis Type",
+        ci_custom_tag_custom_tag AS "Custom Tags",
+        ci_item_domain_name AS "Domain Name",
+        ci_item_ip_address AS "IP Address",
+        ci_item_model AS "Model",
+        ci_item_operating_system AS "Operating System",
+        ci_item_os_version AS "OS Version",
+        ci_item_serial_number AS "Serial Number",
+        ci_item_user_name AS "User Name",
+        NOW() AS timenow,
+        NOW() + INTERVAL '30 days' AS futuretime,
+        ci_item_last_seen_at AS "Last Seen"
+    FROM esh_main.ceh_tn_asset_report_fs_hardware_inventory_report
+    WHERE ci_item_computer_name IS NOT NULL
+)
+What's happening:
+We use a Common Table Expression (CTE) named base_data to store the selected fields and add two calculated fields:
+timenow: the current timestamp using NOW().
+futuretime: the timestamp 30 days in the future using NOW() + INTERVAL '30 days'.
+We still maintain the distinct ci_item_computer_name values and ensure that the computer name is not NULL.
+Step 3: Format the Timestamps
+Now, we need to format the current time (timenow), the future time (futuretime), and the "Last Seen" timestamp into the MM/DD/YYYY format.
+
+sql
+Copy code
+, formatted_data AS (
+    SELECT 
+        "Computer Name",
+        "Chassis Type",
+        "Custom Tags",
+        "Domain Name",
+        "IP Address",
+        "Model",
+        "Operating System",
+        "OS Version",
+        "Serial Number",
+        "User Name",
+        TO_CHAR(timenow, 'MM/DD/YYYY') AS "ConvertedTimeNow",
+        TO_CHAR(futuretime, 'MM/DD/YYYY') AS "Converted14Days",
+        TO_CHAR(TO_TIMESTAMP("Last Seen", 'YYYY-MM-DD'), 'MM/DD/YYYY') AS "Last Seen Formatted",
+        TO_TIMESTAMP("Last Seen", 'YYYY-MM-DD') AS "ConvertedLastSeen",
+        timenow,
+        futuretime
+    FROM base_data
+)
+What's happening:
+We create a second CTE (formatted_data) to apply formatting to the timenow, futuretime, and Last Seen timestamps using the TO_CHAR function to convert them into the MM/DD/YYYY format.
+We also parse ci_item_last_seen_at into a proper timestamp (ConvertedLastSeen) using TO_TIMESTAMP.
+Step 4: Filter Based on the "Last Seen" Timestamp
+Next, we filter the records where the ConvertedLastSeen timestamp is less than or equal to the futuretime (30 days from now).
+
+sql
+Copy code
+, filtered_data AS (
+    SELECT *
+    FROM formatted_data
+    WHERE "ConvertedLastSeen" <= futuretime
+)
+What's happening:
+This CTE (filtered_data) filters the rows where the ConvertedLastSeen timestamp is within the past 30 days by comparing it with futuretime.
+Step 5: Count the Records by "Computer Name"
+We group by the ci_item_computer_name (now Computer Name) and count the number of records for each unique computer name.
+
+sql
+Copy code
+SELECT 
+    "Computer Name",
+    COUNT(*) AS "count"
+FROM filtered_data
+GROUP BY "Computer Name"
+What's happening:
+This part groups the records by Computer Name and counts the number of records for each unique computer name using COUNT(*).
+Step 6: Calculate the Total Count
+Finally, we calculate the total count of all records by summing the individual counts.
+
+sql
+Copy code
+UNION ALL
+SELECT 'totalCount' AS "Computer Name", SUM("count")
+FROM (
+    SELECT 
+        "Computer Name",
+        COUNT(*) AS "count"
+    FROM filtered_data
+    GROUP BY "Computer Name"
+) AS grouped_counts;
+What's happening:
+The UNION ALL combines the individual counts per Computer Name with a total count.
+We use a subquery to calculate the total count by summing the individual counts (SUM("count")).
+Full Combined PostgreSQL Query
+Here is the full PostgreSQL query with all parts combined:
+
+sql
+Copy code
+WITH base_data AS (
+    SELECT DISTINCT 
+        ci_item_computer_name AS "Computer Name",
+        ci_item_chassis_type AS "Chassis Type",
+        ci_custom_tag_custom_tag AS "Custom Tags",
+        ci_item_domain_name AS "Domain Name",
+        ci_item_ip_address AS "IP Address",
+        ci_item_model AS "Model",
+        ci_item_operating_system AS "Operating System",
+        ci_item_os_version AS "OS Version",
+        ci_item_serial_number AS "Serial Number",
+        ci_item_user_name AS "User Name",
+        NOW() AS timenow,
+        NOW() + INTERVAL '30 days' AS futuretime,
+        ci_item_last_seen_at AS "Last Seen"
+    FROM esh_main.ceh_tn_asset_report_fs_hardware_inventory_report
+    WHERE ci_item_computer_name IS NOT NULL
+),
+formatted_data AS (
+    SELECT 
+        "Computer Name",
+        "Chassis Type",
+        "Custom Tags",
+        "Domain Name",
+        "IP Address",
+        "Model",
+        "Operating System",
+        "OS Version",
+        "Serial Number",
+        "User Name",
+        TO_CHAR(timenow, 'MM/DD/YYYY') AS "ConvertedTimeNow",
+        TO_CHAR(futuretime, 'MM/DD/YYYY') AS "Converted14Days",
+        TO_CHAR(TO_TIMESTAMP("Last Seen", 'YYYY-MM-DD'), 'MM/DD/YYYY') AS "Last Seen Formatted",
+        TO_TIMESTAMP("Last Seen", 'YYYY-MM-DD') AS "ConvertedLastSeen",
+        timenow,
+        futuretime
+    FROM base_data
+),
+filtered_data AS (
+    SELECT *
+    FROM formatted_data
+    WHERE "ConvertedLastSeen" <= futuretime
+)
+SELECT 
+    "Computer Name",
+    COUNT(*) AS "count"
+FROM filtered_data
+GROUP BY "Computer Name"
+UNION ALL
+SELECT 'totalCount' AS "Computer Name", SUM("count")
+FROM (
+    SELECT 
+        "Computer Name",
+        COUNT(*) AS "count"
+    FROM filtered_data
+    GROUP BY "Computer Name"
+) AS grouped_counts;
+Final Query Explanation:
+WITH base_data AS (...): Selects distinct records and adds calculated fields (timenow, futuretime).
+WITH formatted_data AS (...): Formats timestamps into human-readable form.
+WITH filtered_data AS (...): Filters out records where ConvertedLastSeen is more than 30 days old.
+Main Query:
+First, counts the number of records for each unique computer.
+Second, calculates the total count of all records using SUM(count) and returns it as a totalCount.
+This combined query mirrors the original Splunk query step by step in PostgreSQL. Let me know if you need further clarification or adjustments!
