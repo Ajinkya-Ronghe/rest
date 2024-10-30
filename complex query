@@ -1,3 +1,17 @@
+| dedup ci_item_computer_name
+| rename ci_item_computer_name AS Computer Name ci_item_chassis_type AS Chassis Type ci_custom_tag_custom_tag AS Custom Tags ci_item_domain_name AS Domain Name ci_item_ip_address AS IP Address ci_item_model AS Model ci_item_operating_system AS Operating System ci_item_os_version AS OS Version ci_item_serial_number AS Serial Number ci_item_user_name AS User Name
+| eval timenow=now()
+| convert timeformat="%m/%d/%Y" ctime(timenow) AS "ConvertedTimeNow"
+| eval futuretime = timenow + 2592000
+| convert timeformat="%m/%d/%Y" ctime(futuretime) AS "Converted14Days"
+| eval ConvertedLastSeen=strptime(ci_item_last_seen_at,"%Y-%m-%d")
+| eval LastSeen=strftime(ConvertedLastSeen,"%m/%d/%Y")
+| where ConvertedLastSeen<=futuretime
+| table Computer Name Domain Name IP Address Operating System Model Chassis Type Serial Number Last Seen User Name
+| stats count by Computer Name | stats sum(count) as totalCount | table totalCount
+
+
+
 1. Removing Duplicates
 Splunk:
 spl
