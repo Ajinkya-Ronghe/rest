@@ -2,38 +2,65 @@ private Map<String, Object> mapJsonToDto(Map<String, Object> jsonObject, Map<Str
     List<Map<String, Object>> columns = (List<Map<String, Object>>) schema.get("columns");
     Map<String, Object> dto = new HashMap<>();
 
-    for (Map<String, Object> column : columns) {
-        String columnName = (String) column.get("field_name");
-        String dataType = (String) column.get("data_type");
+    // Process the main array "Patch Installation State - All Status"
+    List<Map<String, Object>> patchInstallationStatusArray = (List<Map<String, Object>>) jsonObject.get("Patch Installation State - All Status");
+    if (patchInstallationStatusArray != null && !patchInstallationStatusArray.isEmpty()) {
+        Map<String, Object> patchStatus = patchInstallationStatusArray.get(0); // Assuming we process the first object
 
-        // Process fields with "Nested_JSON" type
-        if ("Nested_JSON".equals(dataType)) {
-            List<Map<String, Object>> arrayJson = (List<Map<String, Object>>) column.get("array_json");
-            if (arrayJson != null) {
-                for (Map<String, Object> nestedColumn : arrayJson) {
-                    String nestedColumnName = (String) nestedColumn.get("field_name");
-                    String nestedDataType = (String) nestedColumn.get("data_type");
+        for (Map<String, Object> column : columns) {
+            String columnName = (String) column.get("field_name");
+            String dataType = (String) column.get("data_type");
 
-                    // Process each field in the nested JSON array like regular fields
-                    if (jsonObject.containsKey(nestedColumnName)) {
-                        Object nestedValue = jsonObject.get(nestedColumnName);
-                        dto.put(nestedColumnName, nestedValue);
+            // Check if the column is of type "Nested_JSON" (e.g., "Patch Installation State")
+            if ("Nested_JSON".equals(dataType) && "Patch Installation State".equals(columnName)) {
+                List<Map<String, Object>> patchInstallationStateArray = (List<Map<String, Object>>) patchStatus.get("Patch Installation State");
+                if (patchInstallationStateArray != null && !patchInstallationStateArray.isEmpty()) {
+                    Map<String, Object> nestedPatchState = patchInstallationStateArray.get(0); // Process first object in "Patch Installation State" array
+                    List<Map<String, Object>> arrayJson = (List<Map<String, Object>>) column.get("array_json");
+
+                    // Traverse each field inside "Patch Installation State"
+                    for (Map<String, Object> nestedColumn : arrayJson) {
+                        String nestedFieldName = (String) nestedColumn.get("field_name");
+                        if (nestedPatchState.containsKey(nestedFieldName)) {
+                            dto.put(nestedFieldName, nestedPatchState.get(nestedFieldName));
+                        }
                     }
                 }
+                continue; // Skip adding "Patch Installation State" itself to dto
             }
-            continue; // Skip adding the Nested_JSON field itself to dto
-        }
 
-        // Process regular fields
-        if (jsonObject.containsKey(columnName)) {
-            Object value = jsonObject.get(columnName);
-            dto.put(columnName, value);
+            // Process top-level fields
+            if (patchStatus.containsKey(columnName)) {
+                dto.put(columnName, patchStatus.get(columnName));
+            }
         }
     }
 
-    // Add additional fields if needed
-    dto.put("staging_id", Integer.parseInt(jsonObject.get("staging_id").toString()));
-    dto.put("batch_id", Integer.parseInt(jsonObject.get("batch_id").toString()));
+    // Add staging_id
+    if (jsonObject.containsKey("staging_id")) {
+        dto.put("staging_id", Integer.parseInt(jsonObject.get("staging_id").toString()));
+    }
+
+    // Find and add bank_id based on custom tags
+    try {
+        logger.debug("Trying to find bank id");
+        if (jsonObject.containsKey("Custom Tag")) {
+            Integer bankId = fiservIocalAccountPasswordDaoImpl.findBankByBankName(jsonObject.get("Custom Tag").toString());
+            dto.put("bank_id", bankId);
+        }
+    } catch (Exception e) {
+        logger.debug("Bank id does not exist");
+    }
+
+    try {
+        logger.debug("Trying to find bank id");
+        if (jsonObject.containsKey("ci_custom_tag_custom_tag")) {
+            Integer bankId = fiservIocalAccountPasswordDaoImpl.findBankByBankName(jsonObject.get("ci_custom_tag_custom_tag").toString());
+            dto.put("bank_id", bankId);
+        }
+    } catch (Exception e) {
+        logger.debug("Bank id does not exist");
+    }
 
     return dto;
 }
