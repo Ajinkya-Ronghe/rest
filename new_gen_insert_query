@@ -1,0 +1,35 @@
+public String generateInsertQuery(String tableName, Map<String, Object> schema) {
+    logger.debug("inside generateInsertQuery");
+    List<Map<String, Object>> columns = (List<Map<String, Object>>) schema.get("columns");
+
+    List<String> columnNamesList = new ArrayList<>();
+    List<String> valuesList = new ArrayList<>();
+
+    for (Map<String, Object> column : columns) {
+        String columnName = (String) column.get("column_name");
+        String dataType = (String) column.get("data_type");
+
+        if ("Nested_JSON".equals(dataType) && column.containsKey("array_json")) {
+            // Process fields within the nested JSON
+            List<Map<String, Object>> arrayJson = (List<Map<String, Object>>) column.get("array_json");
+            if (arrayJson != null && !arrayJson.isEmpty()) {
+                Map<String, Object> firstObject = arrayJson.get(0);
+                for (String nestedField : firstObject.keySet()) {
+                    columnNamesList.add(nestedField);
+                    valuesList.add("?");  // Add placeholder for each nested field
+                }
+            }
+        } else {
+            // For regular fields
+            columnNamesList.add(columnName);
+            valuesList.add("?");
+        }
+    }
+
+    // Join the column names and values placeholders
+    String columnNames = String.join(", ", columnNamesList);
+    String values = String.join(", ", valuesList);
+
+    return String.format("INSERT INTO %s (%s, created_time) VALUES (%s, CURRENT_TIMESTAMP::TIMESTAMP)", 
+                          tableName, columnNames, values);
+}
