@@ -1,5 +1,6 @@
 import json
 import re
+from datetime import datetime
 
 def clean_column_name(column_name):
     # Strip leading/trailing spaces, replace multiple spaces or special characters with a single underscore, and convert to lowercase
@@ -10,10 +11,60 @@ def clean_table_name(table_name):
     # Replace multiple special characters and hyphens with a single underscore and convert to lowercase
     return re.sub(r'[^a-zA-Z0-9]+', '_', table_name).lower()
 
+def infer_data_type(value):
+    # Determine the data type based on the content of the value
+    if isinstance(value, bool):
+        return "BOOLEAN"
+    elif isinstance(value, int):
+        return "INTEGER"
+    elif isinstance(value, float):
+        return "FLOAT"
+    elif isinstance(value, str):
+        # Check for date and datetime formats
+        try:
+            datetime.strptime(value, "%Y-%m-%d")
+            return "DATE"
+        except ValueError:
+            pass
+        try:
+            datetime.strptime(value, "%Y-%m-%d %H:%M:%S")
+            return "TIMESTAMP"
+        except ValueError:
+            pass
+        # Use VARCHAR with intelligent length
+        if len(value) <= 50:
+            return "VARCHAR(50)"
+        else:
+            return "VARCHAR(255)"
+    else:
+        return "TEXT"  # Default to TEXT for unrecognized types
+
+def process_nested_json(nested_json, parent_key=""):
+    # Process nested JSON to create column details for table schema and metadata
+    nested_columns = []
+    for key, value in nested_json.items():
+        column_name = clean_column_name(f"{parent_key}_{key}" if parent_key else key)
+        if isinstance(value, dict):
+            # Recursively process nested JSON objects
+            nested_columns.extend(process_nested_json(value, parent_key=column_name))
+        else:
+            # Infer the data type based on the demo content
+            data_type = infer_data_type(value)
+            nested_columns.append({
+                "column_name": column_name,
+                "field_name": key,
+                "data_type": data_type,
+                "is_nullable": True
+            })
+    return nested_columns
+
 def generate_sql_query_and_metadata(json_object, array_name):
     # Clean the array name for use as the table name
     cleaned_table_name = clean_table_name(array_name)
     table_name = f"esh_main.ceh_tn_{cleaned_table_name}"
+    
+    # Determine the name for the primary key column based on whether 'id' exists in the JSON
+    primary_key_name = "primary_id" if "id" in json_object[0] else "id"
     
     # Generate the primary and foreign key constraint names dynamically
     primary_key_constraint = f"{cleaned_table_name}_pkey"
@@ -22,6 +73,10 @@ def generate_sql_query_and_metadata(json_object, array_name):
     # Start forming the SQL query with a commented line for dropping the table
     sql_query = f"-- DROP TABLE IF EXISTS {table_name};\n"
     sql_query += f"CREATE TABLE IF NOT EXISTS {table_name} (\n"
+    
+    # Add the primary key field as the first column, naming it based on the presence of 'id' in the JSON
+    sql_query += f"    {primary_key_name} bigserial NOT NULL,\n"
+    
     metadata = {"columns": []}  # Initialize the metadata structure
     
     # Get the first object from the JSON array
@@ -32,33 +87,62 @@ def generate_sql_query_and_metadata(json_object, array_name):
     for key, value in first_item.items():
         column_name = clean_column_name(key)  # Clean the column name
         
-        # Check if the value is a list or a JSON object (dict)
-        if isinstance(value, (list, dict)):
-            # Treat list or JSON object fields as TEXT
-            data_type = "TEXT"
+        # Check if the value is a list (which contains a single object with fields to be added as columns)
+        if isinstance(value, list) and value:
+            # Create a metadata entry for the main list
+            metadata_entry = {
+                "column_name": column_name,
+                "field_name": key,
+                "data_type": "Nested_JSON",
+                "is_nullable": True,
+                "array_json": []
+            }
+            
+            # Process nested fields within the list and add them to the `array_json` field
+            nested_columns = process_nested_json(value[0], parent_key=column_name)
+            for nested_column in nested_columns:
+                # Add each nested column to the SQL schema and as a nested field in metadata
+                sql_query += f"    {nested_column['column_name']} {nested_column['data_type']} NULL,\n"
+                metadata_entry["array_json"].append(nested_column)
+            
+            metadata['columns'].append(metadata_entry)
+        
+        elif isinstance(value, dict):
+            # Create a metadata entry for the main dict
+            metadata_entry = {
+                "column_name": column_name,
+                "field_name": key,
+                "data_type": "Nested_JSON",
+                "is_nullable": True,
+                "array_json": []
+            }
+            
+            # Process nested fields within the dict and add them to the `array_json` field
+            nested_columns = process_nested_json(value, parent_key=column_name)
+            for nested_column in nested_columns:
+                # Add each nested column to the SQL schema and as a nested field in metadata
+                sql_query += f"    {nested_column['column_name']} {nested_column['data_type']} NULL,\n"
+                metadata_entry["array_json"].append(nested_column)
+            
+            metadata['columns'].append(metadata_entry)
+        
         else:
-            # Treat scalar fields as VARCHAR
-            data_type = "VARCHAR(255)"
-        
-        # Add column to SQL query
-        sql_query += f"    {column_name} {data_type} NULL,\n"
-        
-        # Add to metadata, skip the auto-increment id field
-        if column_name != "id" and column_name != "created_time":
+            # Infer the data type based on the demo content
+            data_type = infer_data_type(value)
+            sql_query += f"    {column_name} {data_type} NULL,\n"
             metadata['columns'].append({
                 "column_name": column_name,
                 "field_name": key,
                 "data_type": data_type,
-                "is_nullable": True  # Assuming all fields are nullable
+                "is_nullable": True
             })
         
         # If "Custom Tags" field is present, mark bank_id to be included
         if key == "Custom Tags":
             bank_id_included = True
     
-    # Append hardcoded fields (staging_id, id as bigserial, and created_time)
+    # Append hardcoded fields (staging_id and created_time)
     sql_query += f"""
-    id bigserial NOT NULL,
     staging_id integer NULL,
     batch_id integer NULL,
     created_time timestamp without time zone NULL,
@@ -70,7 +154,7 @@ def generate_sql_query_and_metadata(json_object, array_name):
 
     # Finalize the table definition with primary and foreign key constraints
     sql_query += f"""
-    CONSTRAINT {primary_key_constraint} PRIMARY KEY (id),
+    CONSTRAINT {primary_key_constraint} PRIMARY KEY ({primary_key_name}),
     CONSTRAINT {foreign_key_constraint} FOREIGN KEY (staging_id)
         REFERENCES esh_main.ceh_api_staging_data (id)
         ON UPDATE NO ACTION
