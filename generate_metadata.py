@@ -48,7 +48,7 @@ def process_nested_json(nested_json, parent_key=""):
             # Recursively process nested JSON objects
             nested_columns.extend(process_nested_json(value, parent_key=column_name))
         else:
-            # Infer the data type based on the demo content
+            # Infer the data type based on the content
             data_type = infer_data_type(value)
             nested_columns.append({
                 "column_name": column_name,
@@ -87,50 +87,26 @@ def generate_sql_query_and_metadata(json_object, array_name):
     for key, value in first_item.items():
         column_name = clean_column_name(key)  # Clean the column name
         
-        # Check if the value is a list (which contains a single object with fields to be added as columns)
+        # Check if the value is a list or dictionary (to process nested fields)
         if isinstance(value, list) and value:
-            # Create a metadata entry for the main list
-            metadata_entry = {
-                "column_name": column_name,
-                "field_name": key,
-                "data_type": "Nested_JSON",
-                "is_nullable": True,
-                "array_json": []
-            }
-            
-            # Process nested fields within the list and add them to the `array_json` field
+            # Process nested fields within the list and add them to the SQL and metadata
             nested_columns = process_nested_json(value[0], parent_key=column_name)
             for nested_column in nested_columns:
-                # Add each nested column to the SQL schema and as a nested field in metadata
                 sql_query += f"    {nested_column['column_name']} {nested_column['data_type']} NULL,\n"
-                metadata_entry["array_json"].append(nested_column)
-            
-            metadata['columns'].append(metadata_entry)
+                metadata["columns"].append(nested_column)
         
         elif isinstance(value, dict):
-            # Create a metadata entry for the main dict
-            metadata_entry = {
-                "column_name": column_name,
-                "field_name": key,
-                "data_type": "Nested_JSON",
-                "is_nullable": True,
-                "array_json": []
-            }
-            
-            # Process nested fields within the dict and add them to the `array_json` field
+            # Process nested fields within the dictionary and add them to the SQL and metadata
             nested_columns = process_nested_json(value, parent_key=column_name)
             for nested_column in nested_columns:
-                # Add each nested column to the SQL schema and as a nested field in metadata
                 sql_query += f"    {nested_column['column_name']} {nested_column['data_type']} NULL,\n"
-                metadata_entry["array_json"].append(nested_column)
-            
-            metadata['columns'].append(metadata_entry)
+                metadata["columns"].append(nested_column)
         
         else:
-            # Infer the data type based on the demo content
+            # Infer the data type based on the content
             data_type = infer_data_type(value)
             sql_query += f"    {column_name} {data_type} NULL,\n"
-            metadata['columns'].append({
+            metadata["columns"].append({
                 "column_name": column_name,
                 "field_name": key,
                 "data_type": data_type,
