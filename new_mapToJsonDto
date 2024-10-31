@@ -6,26 +6,26 @@ private Map<String, Object> mapJsonToDto(Map<String, Object> jsonObject, Map<Str
         String columnName = (String) column.get("field_name");
         String dataType = (String) column.get("data_type");
 
-        // Check if the columnName is a nested key (contains "." for a nested object)
-        if (columnName.contains(".")) {
-            Object nestedValue = getNestedValue(jsonObject, columnName);
-            if (nestedValue != null) {
-                dto.put(columnName, nestedValue);
-            }
-        } else {
-            // If it's a top-level key, map it directly
-            if (jsonObject.containsKey(columnName)) {
-                dto.put(columnName, jsonObject.get(columnName));
-            }
-        }
-
-        // Check for Nested_JSON type and process it
+        // Skip adding the field itself if the type is Nested_JSON
         if ("Nested_JSON".equals(dataType) && column.containsKey("array_json")) {
             List<Map<String, Object>> arrayJson = (List<Map<String, Object>>) column.get("array_json");
             if (arrayJson != null && !arrayJson.isEmpty()) {
                 Map<String, Object> firstObject = arrayJson.get(0);
                 for (Map.Entry<String, Object> entry : firstObject.entrySet()) {
                     dto.put(entry.getKey(), entry.getValue());
+                }
+            }
+        } else {
+            // Check if the columnName is a nested key (contains "." for a nested object)
+            if (columnName.contains(".")) {
+                Object nestedValue = getNestedValue(jsonObject, columnName);
+                if (nestedValue != null) {
+                    dto.put(columnName, nestedValue);
+                }
+            } else {
+                // If it's a top-level key, map it directly
+                if (jsonObject.containsKey(columnName)) {
+                    dto.put(columnName, jsonObject.get(columnName));
                 }
             }
         }
