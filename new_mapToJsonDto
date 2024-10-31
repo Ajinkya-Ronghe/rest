@@ -1,0 +1,52 @@
+private Map<String, Object> mapJsonToDto(Map<String, Object> jsonObject, Map<String, Object> schema) {
+    List<Map<String, Object>> columns = (List<Map<String, Object>>) schema.get("columns");
+    Map<String, Object> dto = new HashMap<>();
+
+    for (Map<String, Object> column : columns) {
+        String columnName = (String) column.get("field_name");
+        String dataType = (String) column.get("data_type");
+
+        // Check if the columnName is a nested key (contains "." for a nested object)
+        if (columnName.contains(".")) {
+            Object nestedValue = getNestedValue(jsonObject, columnName);
+            if (nestedValue != null) {
+                dto.put(columnName, nestedValue);
+            }
+        } else {
+            // If it's a top-level key, map it directly
+            if (jsonObject.containsKey(columnName)) {
+                dto.put(columnName, jsonObject.get(columnName));
+            }
+        }
+
+        // Check for Nested_JSON type and process it
+        if ("Nested_JSON".equals(dataType) && column.containsKey("array_json")) {
+            List<Map<String, Object>> arrayJson = (List<Map<String, Object>>) column.get("array_json");
+            if (arrayJson != null && !arrayJson.isEmpty()) {
+                Map<String, Object> firstObject = arrayJson.get(0);
+                for (Map.Entry<String, Object> entry : firstObject.entrySet()) {
+                    dto.put(entry.getKey(), entry.getValue());
+                }
+            }
+        }
+    }
+
+    dto.put("staging_id", Integer.parseInt(jsonObject.get("staging_id").toString()));
+    try {
+        logger.debug("Trying to find bank id");
+        Integer bankId = fiservIocalAccountPasswordDaoImpl.findBankByBankName(jsonObject.get("Custom Tags").toString());
+        dto.put("bank_id", bankId);
+    } catch (Exception e) {
+        logger.debug("Bank id does not exist");
+    }
+
+    try {
+        logger.debug("Trying to find bank id");
+        Integer bankId = fiservIocalAccountPasswordDaoImpl.findBankByBankName(jsonObject.get("ci_custom_tag_custom_tag").toString());
+        dto.put("bank_id", bankId);
+    } catch (Exception e) {
+        logger.debug("Bank id does not exist");
+    }
+
+    return dto;
+}
