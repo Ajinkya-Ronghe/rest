@@ -2,46 +2,46 @@ private Map<String, Object> mapJsonToDto(Map<String, Object> jsonObject, Map<Str
     List<Map<String, Object>> columns = (List<Map<String, Object>>) schema.get("columns");
     Map<String, Object> dto = new HashMap<>();
 
-    // Process the main array "Patch Installation State - All Status"
-    List<Map<String, Object>> patchInstallationStatusArray = (List<Map<String, Object>>) jsonObject.get("Patch Installation State - All Status");
-    if (patchInstallationStatusArray != null && !patchInstallationStatusArray.isEmpty()) {
-        Map<String, Object> patchStatus = patchInstallationStatusArray.get(0); // Assuming we process the first object
+    // Process each column defined in the schema
+    for (Map<String, Object> column : columns) {
+        String columnName = (String) column.get("field_name");
+        String dataType = (String) column.get("data_type");
 
-        for (Map<String, Object> column : columns) {
-            String columnName = (String) column.get("field_name");
-            String dataType = (String) column.get("data_type");
+        // Check if the column is of type "Nested_JSON"
+        if ("Nested_JSON".equals(dataType)) {
+            // Retrieve the nested JSON array from jsonObject using the column name from the schema
+            List<Map<String, Object>> nestedArray = (List<Map<String, Object>>) jsonObject.get(columnName);
+            if (nestedArray != null && !nestedArray.isEmpty()) {
+                Map<String, Object> nestedObject = nestedArray.get(0); // Process the first object in the array
 
-            // Check if the column is of type "Nested_JSON" (e.g., "Patch Installation State")
-            if ("Nested_JSON".equals(dataType) && "Patch Installation State".equals(columnName)) {
-                List<Map<String, Object>> patchInstallationStateArray = (List<Map<String, Object>>) patchStatus.get("Patch Installation State");
-                if (patchInstallationStateArray != null && !patchInstallationStateArray.isEmpty()) {
-                    Map<String, Object> nestedPatchState = patchInstallationStateArray.get(0); // Process first object in "Patch Installation State" array
-                    List<Map<String, Object>> arrayJson = (List<Map<String, Object>>) column.get("array_json");
-
-                    // Traverse each field inside "Patch Installation State"
-                    for (Map<String, Object> nestedColumn : arrayJson) {
+                // Get the schema-defined fields within the nested array
+                List<Map<String, Object>> arrayJsonSchema = (List<Map<String, Object>>) column.get("array_json");
+                if (arrayJsonSchema != null) {
+                    for (Map<String, Object> nestedColumn : arrayJsonSchema) {
                         String nestedFieldName = (String) nestedColumn.get("field_name");
-                        if (nestedPatchState.containsKey(nestedFieldName)) {
-                            dto.put(nestedFieldName, nestedPatchState.get(nestedFieldName));
+
+                        // Only add nested fields to dto if they exist in the nested JSON object
+                        if (nestedObject.containsKey(nestedFieldName)) {
+                            dto.put(nestedFieldName, nestedObject.get(nestedFieldName));
                         }
                     }
                 }
-                continue; // Skip adding "Patch Installation State" itself to dto
             }
+            continue; // Skip adding the main "Nested_JSON" field itself to dto
+        }
 
-            // Process top-level fields
-            if (patchStatus.containsKey(columnName)) {
-                dto.put(columnName, patchStatus.get(columnName));
-            }
+        // Process top-level fields based on the schema
+        if (jsonObject.containsKey(columnName)) {
+            dto.put(columnName, jsonObject.get(columnName));
         }
     }
 
-    // Add staging_id
+    // Add staging_id based on the schema
     if (jsonObject.containsKey("staging_id")) {
         dto.put("staging_id", Integer.parseInt(jsonObject.get("staging_id").toString()));
     }
 
-    // Find and add bank_id based on custom tags
+    // Find and add bank_id based on "Custom Tag" or "ci_custom_tag_custom_tag" from schema values
     try {
         logger.debug("Trying to find bank id");
         if (jsonObject.containsKey("Custom Tag")) {
