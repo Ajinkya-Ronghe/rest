@@ -6,27 +6,44 @@ private Map<String, Object> mapJsonToDto(Map<String, Object> jsonObject, Map<Str
         String columnName = (String) column.get("field_name");
         String dataType = (String) column.get("data_type");
 
-        // Skip adding the field itself if the type is Nested_JSON
-        if ("Nested_JSON".equals(dataType) && column.containsKey("array_json")) {
-            List<Map<String, Object>> arrayJson = (List<Map<String, Object>>) column.get("array_json");
-            if (arrayJson != null && !arrayJson.isEmpty()) {
-                Map<String, Object> firstObject = arrayJson.get(0);
-                for (Map.Entry<String, Object> entry : firstObject.entrySet()) {
-                    dto.put(entry.getKey(), entry.getValue());
+        // Skip adding the Nested_JSON field itself to dto
+        if ("Nested_JSON".equals(dataType)) {
+            List<Map<String, Object>> arrayJson = (List<Map<String, Object>>) jsonObject.get(columnName);
+            if (arrayJson != null) {
+                for (Map<String, Object> nestedColumn : arrayJson) {
+                    String nestedColumnName = (String) nestedColumn.get("field_name");
+                    String nestedDataType = (String) nestedColumn.get("data_type");
+
+                    // Process each field in the nested JSON array like regular fields
+                    if (nestedColumnName.contains(".")) {
+                        Object nestedValue = getNestedValue(jsonObject, nestedColumnName);
+                        if (nestedValue != null) {
+                            dto.put(nestedColumnName, nestedValue);
+                        }
+                    } else if ("Nested_JSON".equals(nestedDataType)) {
+                        // If there is further nesting, process recursively if needed
+                        // Currently assuming single-level nested JSON based on requirement
+                        continue;
+                    } else {
+                        if (jsonObject.containsKey(nestedColumnName)) {
+                            dto.put(nestedColumnName, jsonObject.get(nestedColumnName));
+                        }
+                    }
                 }
             }
+            continue; // Skip the rest of the loop for this Nested_JSON field
+        }
+
+        // Check if the columnName is a nested key (contains "." for a nested object)
+        if (columnName.contains(".")) {
+            Object nestedValue = getNestedValue(jsonObject, columnName);
+            if (nestedValue != null) {
+                dto.put(columnName, nestedValue);
+            }
         } else {
-            // Check if the columnName is a nested key (contains "." for a nested object)
-            if (columnName.contains(".")) {
-                Object nestedValue = getNestedValue(jsonObject, columnName);
-                if (nestedValue != null) {
-                    dto.put(columnName, nestedValue);
-                }
-            } else {
-                // If it's a top-level key, map it directly
-                if (jsonObject.containsKey(columnName)) {
-                    dto.put(columnName, jsonObject.get(columnName));
-                }
+            // If it's a top-level key, map it directly
+            if (jsonObject.containsKey(columnName)) {
+                dto.put(columnName, jsonObject.get(columnName));
             }
         }
     }
