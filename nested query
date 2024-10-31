@@ -1,0 +1,53 @@
+jdbcTemplate.batchUpdate(insertQuery, dtoList.size(), (ps, dto) -> {
+    List<Map<String, Object>> columns = (List<Map<String, Object>>) schema.get("columns");
+
+    int parameterIndex = 1; // Keeps track of the parameter index for PreparedStatement
+
+    for (Map<String, Object> column : columns) {
+        String columnName = (String) column.get("field_name");
+        String dataType = (String) column.get("data_type");
+        Object value = dto.get(columnName);
+
+        // Process Nested_JSON columns
+        if ("Nested_JSON".equals(dataType)) {
+            List<Map<String, Object>> nestedColumns = (List<Map<String, Object>>) column.get("array_json");
+            if (nestedColumns != null && value instanceof List) {
+                // Assuming there is a list of nested JSON objects, we process the first one
+                Map<String, Object> nestedJson = ((List<Map<String, Object>>) value).get(0);
+
+                for (Map<String, Object> nestedColumn : nestedColumns) {
+                    String nestedColumnName = (String) nestedColumn.get("field_name");
+                    Object nestedValue = nestedJson.get(nestedColumnName);
+
+                    // Set the value based on the type of nestedValue
+                    setPreparedStatementValue(ps, parameterIndex, nestedValue);
+                    parameterIndex++;
+                }
+            }
+        } else {
+            // Process top-level fields
+            setPreparedStatementValue(ps, parameterIndex, value);
+            parameterIndex++;
+        }
+    }
+});
+
+// Helper method to set the value in PreparedStatement based on type
+private void setPreparedStatementValue(PreparedStatement ps, int index, Object value) throws SQLException {
+    if (value instanceof List) {
+        // Assuming JSON storage for lists, convert to JSON string
+        String json = new Gson().toJson(value);
+        ps.setString(index, json);
+    } else if (value instanceof Map) {
+        // Assuming JSON storage for maps, convert to JSON string
+        String json = new Gson().toJson(value);
+        ps.setString(index, json);
+    } else if (value instanceof Integer) {
+        ps.setInt(index, (Integer) value);
+    } else if (value instanceof String) {
+        ps.setString(index, (String) value);
+    } else {
+        // Default to setObject for other types
+        ps.setObject(index, value);
+    }
+}
