@@ -2,10 +2,10 @@ WITH calculated_data AS (
     SELECT 
         custom_tags,
         computer_name,
-        CAST(cpu_consumption AS NUMERIC) AS total_cpu_usage,
+        CAST(REGEXP_REPLACE(cpu_consumption, '[^0-9\.]', '', 'g') AS NUMERIC) AS total_cpu_usage,  -- Removes '%' and converts to NUMERIC
         CAST(number_of_processor_cores AS INTEGER) AS cores,
         (CAST(number_of_processor_cores AS INTEGER) * 100) AS total_cpu_available,
-        ROUND((CAST(cpu_consumption AS NUMERIC) / (CAST(number_of_processor_cores AS INTEGER) * 100)) * 100, 2) AS cpu_percentage,
+        ROUND((CAST(REGEXP_REPLACE(cpu_consumption, '[^0-9\.]', '', 'g') AS NUMERIC) / (CAST(number_of_processor_cores AS INTEGER) * 100)) * 100, 2) AS cpu_percentage,
         REGEXP_MATCHES(high_cpu_processes_5, '\S+') AS process
     FROM 
         esh_main.ceh_tn_splunk_high_cpu_linux
