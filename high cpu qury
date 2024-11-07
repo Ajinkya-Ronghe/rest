@@ -1,0 +1,27 @@
+WITH processed_data AS (
+    SELECT 
+        "Custom_Tags", 
+        "Computer_Name", 
+        CAST("CPU_Consumption" AS NUMERIC) AS "Total_CPU_Usage", 
+        CAST("Number_of_Processor_Cores" AS NUMERIC) AS "Cores",
+        100 AS "Total_CPU_Available",
+        ROUND(("CPU_Consumption"::NUMERIC / 100) * "Total_CPU_Available") AS "CPU_Percentage",
+        "Process"
+    FROM your_table_name -- Replace with your actual table name
+)
+SELECT 
+    "Custom_Tags", 
+    "Computer_Name", 
+    "CPU_Consumption", 
+    "Number_of_Processor_Cores", 
+    "Total_CPU_Usage", 
+    "Total_CPU_Available", 
+    "CPU_Percentage", 
+    "Process"
+FROM 
+    processed_data
+WHERE 
+    "CPU_Percentage" >= 90
+ORDER BY 
+    "Custom_Tags", 
+    "Computer_Name";
