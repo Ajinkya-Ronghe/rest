@@ -1,26 +1,29 @@
-WITH processed_data AS (
+WITH calculated_data AS (
     SELECT 
-        "custom_tags" AS "Custom_Tags", 
-        "computer_name" AS "Computer_Name", 
-        CAST("cpu_consumption" AS NUMERIC) AS "Total_CPU_Usage", 
-        CAST("number_of_processor_cores" AS NUMERIC) AS "Cores",
-        100 AS "Total_CPU_Available",
-        ROUND(("cpu_consumption"::NUMERIC / "Total_CPU_Available") * 100) AS "CPU_Percentage",
-        regexp_matches("high_cpu_processes_5_", '(?P<Process>\\S+)') AS "Process"
-    FROM esh_main.ceh_tn_splunk_packet_loss
+        custom_tags,
+        computer_name,
+        CAST(cpu_consumption AS NUMERIC) AS total_cpu_usage,
+        CAST(number_of_processor_cores AS INTEGER) AS cores,
+        (CAST(number_of_processor_cores AS INTEGER) * 100) AS total_cpu_available,
+        ROUND((CAST(cpu_consumption AS NUMERIC) / (CAST(number_of_processor_cores AS INTEGER) * 100)) * 100, 2) AS cpu_percentage,
+        REGEXP_MATCHES(high_cpu_processes_5, '\S+') AS process
+    FROM 
+        esh_main.ceh_tn_splunk_high_cpu_linux
 )
 SELECT 
-    "Custom_Tags", 
-    "Computer_Name", 
-    "Total_CPU_Usage" AS "CPU Consumption", 
-    "Cores" AS "Number_of_Processor_Cores", 
-    "Total_CPU_Available", 
-    "CPU_Percentage", 
-    "Process"
+    custom_tags,
+    computer_name,
+    total_cpu_usage,
+    cores,
+    total_cpu_available,
+    cpu_percentage,
+    ARRAY_AGG(process) AS processes  -- Collect up to 5 processes
 FROM 
-    processed_data
+    calculated_data
 WHERE 
-    "CPU_Percentage" >= 90
+    cpu_percentage >= 90
+GROUP BY 
+    custom_tags, computer_name, total_cpu_usage, cores, total_cpu_available, cpu_percentage
 ORDER BY 
-    "Custom_Tags", 
-    "Computer_Name";
+    custom_tags DESC
+LIMIT 5;
