@@ -5,8 +5,8 @@ WITH processed_data AS (
         CAST("CPU_Consumption" AS NUMERIC) AS "Total_CPU_Usage", 
         CAST("Number_of_Processor_Cores" AS NUMERIC) AS "Cores",
         100 AS "Total_CPU_Available",
-        ROUND(("CPU_Consumption"::NUMERIC / 100) * "Total_CPU_Available") AS "CPU_Percentage",
-        "Process"
+        ROUND(("CPU_Consumption"::NUMERIC / "Total_CPU_Available") * 100) AS "CPU_Percentage",
+        (regexp_matches("High_CPU_Processes_5_", '\S+', 'g'))[1] AS "Process"  -- Applying regex
     FROM your_table_name -- Replace with your actual table name
 )
 SELECT 
