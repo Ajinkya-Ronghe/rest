@@ -5,11 +5,11 @@ future_time AS (
     SELECT timenow, timenow + INTERVAL '3 days' AS futertime
     FROM current_time
 )
-SELECT 
+SELECT DISTINCT ON (ci_item_computer_name)
     ci_item_computer_name AS "Computer Name",
     ci_item_domain_name AS "Domain Name",
     ci_item_ip_address AS "IP Address",
-    ci_item_os_version AS "Operating System",
+    ci_item_os_version AS "OS Version",
     ci_item_model AS "Model",
     ci_item_chassis_type AS "Chassis Type",
     ci_item_serial_number AS "Serial Number",
@@ -21,4 +21,4 @@ FROM
 WHERE 
     ci_item_last_seen_at::timestamp < futertime
 ORDER BY 
-    "Last Seen" DESC;
+    ci_item_computer_name, "Last Seen" DESC;
