@@ -4,21 +4,21 @@ WITH latest_data AS (
         custom_tags AS "Custom Tags",
         operating_system AS "Operating System",
         ipv4_address AS "IPv4 Address",
-        tanium_client_version AS "Tanium Client Version",
+        client_health_tanium_client_version AS "Tanium Client Version",
         tanium_client_core_health AS "Tanium Client Core Health",
-        patch_scan_age_days_since_successful_scan AS "Days Since Successful Scan",
-        patch_scan_errors_message AS "Error Message",
-        patch_deployment_errors_deployment_id AS "Deployment ID",
+        patch_scan_errors AS "Error Message",
+        patch_deployment_errors AS "Deployment Error Message",
         patch_is_process_running AS "Is Process Running",
-        patch_has_enforced_scan_configurations AS "Has Enforced Scan Configuration",
+        patch_has_enforced_scan_configuration AS "Has Enforced Scan Configuration",
         patch_coverage_status_details AS "Detail",
         patch_coverage_status_status AS "Status",
+        patch_scan_age_days_since_successful_scan AS "Days Since Successful Scan",
         ROW_NUMBER() OVER (
             PARTITION BY computer_name
             ORDER BY created_time DESC
         ) AS row_num
     FROM 
-        esh_main.tq_core_patch_health
+        esh_main.ceh_tanium_core_and_patch_health
     WHERE 
         tanium_client_core_health = 'Healthy'
 )
