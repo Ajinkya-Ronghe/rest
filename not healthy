@@ -11,7 +11,6 @@ WITH latest_data AS (
         patch_is_process_running AS "Is Process Running",
         patch_has_enforced_scan_configuration AS "Has Enforced Scan Configuration",
         patch_coverage_status_details AS "Detail",
-        patch_coverage_status_status AS "Status",
         patch_scan_age_days_since_successful_scan AS "Days Since Successful Scan",
         ROW_NUMBER() OVER (
             PARTITION BY computer_name
@@ -20,7 +19,7 @@ WITH latest_data AS (
     FROM 
         esh_main.ceh_tanium_core_and_patch_health
     WHERE 
-        tanium_client_core_health = 'Healthy'
+        tanium_client_core_health = 'Healthy' -- This ensures proper equality filtering
 )
 SELECT *
 FROM latest_data
