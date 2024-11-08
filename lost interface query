@@ -1,0 +1,24 @@
+WITH current_time AS (
+    SELECT NOW() AS timenow
+),
+future_time AS (
+    SELECT timenow, timenow + INTERVAL '3 days' AS futertime
+    FROM current_time
+)
+SELECT 
+    ci_item_computer_name AS "Computer Name",
+    ci_item_domain_name AS "Domain Name",
+    ci_item_ip_address AS "IP Address",
+    ci_item_os_version AS "Operating System",
+    ci_item_model AS "Model",
+    ci_item_chassis_type AS "Chassis Type",
+    ci_item_serial_number AS "Serial Number",
+    ci_item_user_name AS "User Name",
+    TO_CHAR(ci_item_last_seen_at::timestamp, 'MM/DD/YYYY') AS "Last Seen"
+FROM 
+    esh_main.ceh_asset_report_fs_hardware_inventory_report,
+    future_time
+WHERE 
+    ci_item_last_seen_at::timestamp < futertime
+ORDER BY 
+    "Last Seen" DESC;
