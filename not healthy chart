@@ -1,0 +1,34 @@
+WITH filtered_data AS (
+    SELECT 
+        computer_name AS "Computer Name",
+        custom_tags AS "Custom Tags",
+        tanium_client_core_health AS "Tanium Client Core Health",
+        created_time AS "_time",
+        CASE 
+            WHEN tanium_client_core_health ILIKE 'Error%' 
+                 OR tanium_client_core_health ILIKE '%PowerShell%' 
+            THEN 'error'
+            ELSE NULL
+        END AS core_health_eval
+    FROM 
+        esh_main.ceh_tanium_core_and_patch_health
+    WHERE 
+        tanium_client_core_health != 'Healthy'
+),
+deduplicated_data AS (
+    SELECT DISTINCT ON (computer_name, _time)
+        computer_name,
+        _time,
+        core_health_eval
+    FROM filtered_data
+)
+SELECT 
+    DATE_TRUNC('day', _time) AS time_bucket,
+    core_health_eval,
+    COUNT(*) AS count
+FROM 
+    deduplicated_data
+GROUP BY 
+    time_bucket, core_health_eval
+ORDER BY 
+    time_bucket, core_health_eval;
