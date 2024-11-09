@@ -1,4 +1,4 @@
-SELECT 
+SELECT DISTINCT ON (ci_item_computer_name) -- Deduplication based on ci_item_computer_name
     ci_item_computer_name AS "Computer_Name",
     ci_item_chassis_type AS "Chassis_Type",
     ci_item_custom_tag_custom_tag AS "Custom_Tags",
@@ -12,13 +12,13 @@ SELECT
     ci_item_operating_system AS "Operating_System",
     ci_item_os_platform AS "OS_Platform",
     ci_item_os_version AS "OS_Version",
-    ci_item_ram AS "RAM_GB",
+    ci_item_ram / 1000000000 AS "RAM_GB",
     ci_item_serial_number AS "Serial_Number",
     ci_item_user_name AS "User_Name",
     ci_item_uptime / (60 * 60 * 24) AS "Uptime_Days",
     ci_item_total_disk_space / 1000000000 AS "Total_Disk_Space_GB",
     ci_item_number_of_logical_processors AS "Number_of_Logical_Processors",
-    ROUND(ci_item_ram / 1000.0) AS "RAM_GB",
+    ROUND(ci_item_ram / 1000.0) AS "RAM_GB_Approx",
     CASE 
         WHEN ci_item_is_virtual = '1' THEN 'True'
         ELSE 'False'
@@ -26,4 +26,7 @@ SELECT
 FROM 
     esh_main.ceh_tn_asset_report_fs_hardware_inventory_report
 WHERE 
-    ci_item_is_virtual IS NOT NULL;
+    ci_item_is_virtual IS NOT NULL -- Ensures no nulls in Is_Virtual field
+ORDER BY 
+    ci_item_computer_name,         -- Deduplication is based on ci_item_computer_name
+    ci_item_chassis_type;          -- Sorting as per Splunk query (sort by chassis type)
