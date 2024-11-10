@@ -1,0 +1,56 @@
+WITH expanded_data AS (
+    SELECT
+        computer_name,
+        custom_tags,
+        operating_system,
+        jsonb_array_elements(patch_scan_errors::jsonb) AS patch_scan_error_element,
+        tanium_client_core_health,
+        patch_is_process_running,
+        days_since_successful_scan::TEXT AS days_since_successful_scan,
+        patch_has_enforced_scan_configuration AS enforced_scan_configuration,
+        patch_scan_error_element ->> 'Error Message' AS patch_scan_error_message,
+        patch_scan_error_element ->> 'Detail' AS detail,
+        patch_scan_error_element ->> 'Status' AS status
+    FROM esh_main.ceh_tn_tanium_core_and_patch_health
+),
+filtered_data AS (
+    SELECT
+        computer_name,
+        custom_tags,
+        operating_system,
+        tanium_client_core_health,
+        patch_is_process_running,
+        days_since_successful_scan,
+        enforced_scan_configuration,
+        patch_scan_error_message,
+        detail,
+        status
+    FROM expanded_data
+    WHERE status = 'Optimal'
+),
+latest_values AS (
+    SELECT
+        custom_tags,
+        MAX(operating_system) AS operating_system,
+        MAX(enforced_scan_configuration) AS enforced_scan_configuration,
+        MAX(patch_is_process_running) AS is_process_running,
+        MAX(days_since_successful_scan) AS days_since_successful_scan,
+        MAX(status) AS status,
+        MAX(detail) AS detail,
+        MAX(patch_scan_error_message) AS patch_scan_error_message,
+        computer_name
+    FROM filtered_data
+    GROUP BY computer_name, custom_tags
+),
+counted_data AS (
+    SELECT
+        detail,
+        COUNT(*) AS count
+    FROM latest_values
+    GROUP BY detail
+)
+SELECT
+    detail,
+    count
+FROM counted_data
+ORDER BY count DESC;
