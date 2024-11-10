@@ -1,0 +1,30 @@
+WITH expanded_data AS (
+    SELECT
+        computer_name,
+        custom_tags,
+        operating_system,
+        ipv4_address,
+        client_health_tanium_client_version AS tanium_version,
+        tanium_client_core_health
+    FROM esh_main.ceh_tn_tanium_core_and_patch_health
+),
+latest_values AS (
+    SELECT
+        computer_name,
+        MAX(custom_tags) AS custom_tags,
+        MAX(operating_system) AS operating_system,
+        MAX(ipv4_address) AS ipv4_address,
+        MAX(tanium_version) AS tanium_version,
+        MAX(tanium_client_core_health) AS tanium_core_health
+    FROM expanded_data
+    GROUP BY computer_name
+)
+SELECT
+    computer_name,
+    custom_tags,
+    operating_system,
+    ipv4_address,
+    tanium_version,
+    tanium_core_health
+FROM latest_values
+ORDER BY tanium_version;
