@@ -24,7 +24,9 @@ filtered_data AS (
         client_health_tanium_client_version,
         patch_scan_error_element ->> 'Error Message' AS patch_scan_error_message,
         patch_deployment_error_element ->> 'Deployment ID' AS deployment_id,
-        patch_scan_error_element ->> 'Detail' AS detail
+        patch_scan_error_element ->> 'Detail' AS detail,
+        patch_scan_error_element ->> 'Status' AS status,
+        patch_deployment_error_element ->> 'Error Message' AS deployment_error_message
     FROM expanded_data
     WHERE 
         (patch_deployment_error_element ->> 'Deployment ID') NOT LIKE 'results%'
@@ -42,6 +44,8 @@ latest_values AS (
         MAX(patch_scan_error_message) AS patch_scan_error_message,
         MAX(deployment_id) AS deployment_id,
         MAX(detail) AS detail,
+        MAX(status) AS status,
+        MAX(deployment_error_message) AS deployment_error_message,
         computer_name
     FROM filtered_data
     GROUP BY computer_name, custom_tags
@@ -57,6 +61,8 @@ SELECT
     tanium_client_version,
     patch_scan_error_message,
     deployment_id,
-    detail
+    detail,
+    status,
+    deployment_error_message
 FROM latest_values
 ORDER BY deployment_id;
