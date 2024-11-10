@@ -14,7 +14,7 @@ WITH filtered_data AS (
         created_time,
         bank_id
     FROM esh_main.ceh_tn_tanium_core_and_patch_health
-    WHERE days_since_successful_scan NOT IN ('0 Days', '1 Day', '2 Days')
+    WHERE days_since_successful_scan NOT IN ('0 Days', '1 Day', '2 Days', '3 Days')
 ),
 latest_values AS (
     SELECT
@@ -26,21 +26,13 @@ latest_values AS (
         MAX(days_since_successful_scan) AS days_since_successful_scan,
         MAX(patch_deployment_errors_json ->> 'Error Message') AS deployment_error_message,
         MAX(patch_deployment_errors_json ->> 'Deployment ID') AS deployment_id,
-        MAX(patch_deployment_errors_json ->> 'Detail') AS detail,
         MAX(patch_scan_errors_json ->> 'Scan Error Message') AS patch_scan_error_message,
+        MAX(patch_deployment_errors_json ->> 'Detail') AS detail,
         computer_name
     FROM filtered_data
     GROUP BY computer_name, custom_tags
-),
-counted_data AS (
-    SELECT
-        days_since_successful_scan,
-        COUNT(*) AS count
-    FROM latest_values
-    GROUP BY days_since_successful_scan
 )
 SELECT
-    days_since_successful_scan,
-    count
-FROM counted_data
-ORDER BY count DESC;
+    *
+FROM latest_values
+ORDER BY days_since_successful_scan DESC;
