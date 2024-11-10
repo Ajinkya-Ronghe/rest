@@ -3,6 +3,7 @@ WITH expanded_data AS (
         computer_name,
         custom_tags,
         operating_system,
+        ipv4_address,
         jsonb_array_elements(patch_scan_errors::jsonb) AS patch_scan_error_element,
         jsonb_array_elements(patch_deployment_errors::jsonb) AS patch_deployment_error_element,
         tanium_client_core_health,
@@ -15,8 +16,8 @@ filtered_data AS (
         computer_name,
         custom_tags,
         operating_system,
+        ipv4_address,
         patch_scan_error_element ->> 'Error Message' AS patch_scan_error_message,
-        patch_deployment_error_element ->> 'Error Message' AS deployment_error_message,
         tanium_client_core_health,
         patch_is_process_running,
         days_since_successful_scan
@@ -28,24 +29,16 @@ latest_values AS (
     SELECT
         custom_tags,
         MAX(operating_system) AS operating_system,
+        MAX(ipv4_address) AS ipv4_address,
         MAX(tanium_client_core_health) AS tanium_client_core_health,
         MAX(patch_is_process_running) AS is_process_running,
         MAX(days_since_successful_scan) AS days_since_successful_scan,
         MAX(patch_scan_error_message) AS patch_scan_error_message,
-        MAX(deployment_error_message) AS deployment_error_message,
         computer_name
     FROM filtered_data
     GROUP BY computer_name, custom_tags
-),
-counted_data AS (
-    SELECT
-        patch_scan_error_message,
-        COUNT(*) AS count
-    FROM latest_values
-    GROUP BY patch_scan_error_message
 )
 SELECT
-    patch_scan_error_message,
-    count
-FROM counted_data
-ORDER BY patch_scan_error_message;
+    *
+FROM latest_values
+ORDER BY days_since_successful_scan DESC;
