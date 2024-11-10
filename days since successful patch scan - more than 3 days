@@ -1,0 +1,45 @@
+WITH filtered_data AS (
+    SELECT
+        computer_name,
+        custom_tags,
+        operating_system,
+        ipv4_address,
+        patch_scan_errors::jsonb AS patch_scan_errors_json,
+        patch_deployment_errors::jsonb AS patch_deployment_errors_json,
+        tanium_client_core_health,
+        patch_is_process_running,
+        days_since_successful_scan::TEXT AS days_since_successful_scan,
+        staging_id,
+        batch_id,
+        created_time,
+        bank_id
+    FROM esh_main.ceh_tn_tanium_core_and_patch_health
+    WHERE days_since_successful_scan NOT IN ('0 Days', '1 Day', '2 Days')
+),
+latest_values AS (
+    SELECT
+        custom_tags,
+        MAX(operating_system) AS operating_system,
+        MAX(ipv4_address) AS ipv4_address,
+        MAX(tanium_client_core_health) AS tanium_client_core_health,
+        MAX(patch_is_process_running) AS is_process_running,
+        MAX(days_since_successful_scan) AS days_since_successful_scan,
+        MAX(patch_deployment_errors_json ->> 'Error Message') AS deployment_error_message,
+        MAX(patch_deployment_errors_json ->> 'Deployment ID') AS deployment_id,
+        MAX(patch_deployment_errors_json ->> 'Detail') AS detail,
+        MAX(patch_scan_errors_json ->> 'Scan Error Message') AS patch_scan_error_message,
+        computer_name
+    FROM filtered_data
+    GROUP BY computer_name, custom_tags
+),
+counted_data AS (
+    SELECT
+        days_since_successful_scan,
+        COUNT(*) AS count
+    FROM latest_values
+    GROUP BY days_since_successful_scan
+)
+SELECT
+    *
+FROM counted_data
+ORDER BY count DESC;
