@@ -18,3 +18,21 @@ WHERE patch_deployment_errors IS NOT NULL
   AND patch_deployment_errors != 'No Deployment Errors'
 GROUP BY computer_name
 ORDER BY count DESC;
+
+
+
+
+SELECT 
+    patch_deployment_errors AS "Deployment Error Message",
+    COUNT(*) AS count
+FROM (
+    SELECT 
+        patch_deployment_errors,
+        MAX(created_time) AS latest_created_time
+    FROM esh_main.ceh_tanium_core_and_patch_health
+    WHERE patch_deployment_errors IS NOT NULL 
+      AND patch_deployment_errors != 'No Deployment Errors'
+    GROUP BY patch_deployment_errors
+) subquery
+GROUP BY "Deployment Error Message"
+ORDER BY count DESC;
