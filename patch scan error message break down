@@ -1,41 +1,43 @@
-WITH filtered_data AS (
+WITH extracted_errors AS (
     SELECT
-        computer_name,
-        custom_tags,
-        operating_system,
-        patch_scan_errors::jsonb AS patch_scan_errors_json,
-        tanium_client_core_health,
-        patch_is_process_running,
-        days_since_successful_scan::TEXT AS days_since_successful_scan,
-        staging_id,
-        batch_id,
-        created_time,
-        bank_id
-    FROM esh_main.ceh_tanium_core_and_patch_health
-    WHERE (patch_scan_errors::jsonb ->> 'Error Message') IS DISTINCT FROM 'No Scan Errors'
-),
-latest_values AS (
-    SELECT
-        custom_tags,
-        MAX(operating_system) AS operating_system,
-        MAX(tanium_client_core_health) AS tanium_client_core_health,
-        MAX(patch_is_process_running) AS is_process_running,
-        MAX(days_since_successful_scan) AS days_since_successful_scan,
-        MAX(patch_scan_errors_json ->> 'Error Message') AS patch_scan_error_message,
-        MAX(patch_scan_errors_json ->> 'Detail') AS detail,
+        custom_tags AS "Custom Tags",
+        operating_system AS "Operating System",
+        patch_has_enforced_scan_configuration AS "Has Enforced Scan Configuration",
+        patch_is_process_running AS "Is Process Running",
+        days_since_successful_scan AS "Days Since Successful Scan",
+        patch_coverage_status_details::json ->> 'Status' AS "Status",
+        patch_coverage_status_details::json ->> 'Detail' AS "Detail",
+        patch_scan_error_elements->>'Error Message' AS "Patch Scan Error Message",
         computer_name
-    FROM filtered_data
-    GROUP BY computer_name, custom_tags
-),
-counted_data AS (
-    SELECT
-        patch_scan_error_message,
-        COUNT(*) AS count
-    FROM latest_values
-    GROUP BY patch_scan_error_message
+    FROM 
+        esh_main.ceh_tanium_core_and_patch_health,
+        jsonb_array_elements(patch_scan_errors::jsonb) AS patch_scan_error_elements
+    WHERE 
+        patch_scan_errors IS NOT NULL
+        AND patch_scan_errors::jsonb != '[]'::jsonb
 )
-SELECT
-    patch_scan_error_message,
-    count
-FROM counted_data
-ORDER BY count DESC;
+SELECT 
+    "Custom Tags",
+    "Operating System",
+    "Has Enforced Scan Configuration",
+    "Is Process Running",
+    "Days Since Successful Scan",
+    "Status",
+    "Detail",
+    "Patch Scan Error Message",
+    COUNT(computer_name) AS "Count by Patch Scan Error Message"
+FROM 
+    extracted_errors
+WHERE 
+    "Patch Scan Error Message" != 'No Scan Errors'
+GROUP BY 
+    "Custom Tags",
+    "Operating System",
+    "Has Enforced Scan Configuration",
+    "Is Process Running",
+    "Days Since Successful Scan",
+    "Status",
+    "Detail",
+    "Patch Scan Error Message"
+ORDER BY 
+    COUNT(computer_name) DESC;
