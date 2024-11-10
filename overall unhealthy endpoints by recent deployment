@@ -7,8 +7,7 @@ WITH expanded_data AS (
         jsonb_array_elements(patch_deployment_errors::jsonb) AS patch_deployment_error_element,
         tanium_client_core_health,
         patch_is_process_running,
-        days_since_successful_scan::TEXT AS days_since_successful_scan,
-        patch_deployment_error_element ->> 'Deployment ID' AS deployment_id
+        days_since_successful_scan::TEXT AS days_since_successful_scan
     FROM esh_main.ceh_tn_tanium_core_and_patch_health
 ),
 filtered_data AS (
@@ -19,9 +18,11 @@ filtered_data AS (
         tanium_client_core_health,
         patch_is_process_running,
         days_since_successful_scan,
-        deployment_id
+        patch_deployment_error_element ->> 'Deployment ID' AS deployment_id
     FROM expanded_data
-    WHERE deployment_id IS DISTINCT FROM 'results' AND deployment_id NOT LIKE 'TSE%'
+    WHERE 
+        (patch_deployment_error_element ->> 'Deployment ID') IS DISTINCT FROM 'results'
+        AND (patch_deployment_error_element ->> 'Deployment ID') NOT LIKE 'TSE%'
 ),
 latest_values AS (
     SELECT
