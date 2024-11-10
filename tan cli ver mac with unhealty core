@@ -1,0 +1,25 @@
+WITH expanded_data AS (
+    SELECT
+        computer_name,
+        client_health_tanium_client_version AS tanium_client_version
+    FROM esh_main.ceh_tn_tanium_core_and_patch_health
+),
+latest_values AS (
+    SELECT
+        computer_name,
+        MAX(tanium_client_version) AS tanium_client_version
+    FROM expanded_data
+    GROUP BY computer_name
+),
+counted_data AS (
+    SELECT
+        tanium_client_version,
+        COUNT(*) AS count
+    FROM latest_values
+    GROUP BY tanium_client_version
+)
+SELECT
+    tanium_client_version,
+    count
+FROM counted_data
+ORDER BY tanium_client_version;
