@@ -11,8 +11,8 @@ WITH filtered_data AS (
         batch_id,
         created_time,
         bank_id
-    FROM esh_main.ceh_tn_tanium_core_and_patch_health
-    WHERE (patch_scan_errors::jsonb ->> 'Scan Error Message') IS DISTINCT FROM 'No Scan Errors'
+    FROM esh_main.ceh_tanium_core_and_patch_health
+    WHERE (patch_scan_errors::jsonb ->> 'Error Message') IS DISTINCT FROM 'No Scan Errors'
 ),
 latest_values AS (
     SELECT
@@ -21,7 +21,7 @@ latest_values AS (
         MAX(tanium_client_core_health) AS tanium_client_core_health,
         MAX(patch_is_process_running) AS is_process_running,
         MAX(days_since_successful_scan) AS days_since_successful_scan,
-        MAX(patch_scan_errors_json ->> 'Scan Error Message') AS patch_scan_error_message,
+        MAX(patch_scan_errors_json ->> 'Error Message') AS patch_scan_error_message,
         MAX(patch_scan_errors_json ->> 'Detail') AS detail,
         computer_name
     FROM filtered_data
