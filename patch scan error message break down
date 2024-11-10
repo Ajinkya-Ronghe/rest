@@ -1,31 +1,35 @@
-WITH filtered_data AS (
+WITH expanded_data AS (
     SELECT
         computer_name,
         custom_tags,
         operating_system,
-        ipv4_address,
-        patch_scan_errors::jsonb AS patch_scan_errors_json,
-        patch_deployment_errors::jsonb AS patch_deployment_errors_json,
+        jsonb_array_elements(patch_scan_errors::jsonb) AS patch_scan_error_element,
         tanium_client_core_health,
         patch_is_process_running,
-        days_since_successful_scan::TEXT AS days_since_successful_scan,
-        staging_id,
-        batch_id,
-        created_time,
-        bank_id
+        days_since_successful_scan::TEXT AS days_since_successful_scan
     FROM esh_main.ceh_tn_tanium_core_and_patch_health
-    WHERE (patch_scan_errors::jsonb ->> 'Scan Error Message') IS DISTINCT FROM 'No Scan Errors'
+),
+filtered_data AS (
+    SELECT
+        computer_name,
+        custom_tags,
+        operating_system,
+        patch_scan_error_element ->> 'Error Message' AS patch_scan_error_message,
+        tanium_client_core_health,
+        patch_is_process_running,
+        days_since_successful_scan
+    FROM expanded_data
+    WHERE 
+        (patch_scan_error_element ->> 'Error Message') IS DISTINCT FROM 'No Scan Errors'
 ),
 latest_values AS (
     SELECT
         custom_tags,
         MAX(operating_system) AS operating_system,
-        MAX(ipv4_address) AS ipv4_address,
         MAX(tanium_client_core_health) AS tanium_client_core_health,
         MAX(patch_is_process_running) AS is_process_running,
         MAX(days_since_successful_scan) AS days_since_successful_scan,
-        MAX(patch_scan_errors_json ->> 'Scan Error Message') AS patch_scan_error_message,
-        MAX(patch_scan_errors_json ->> 'Detail') AS detail,
+        MAX(patch_scan_error_message) AS patch_scan_error_message,
         computer_name
     FROM filtered_data
     GROUP BY computer_name, custom_tags
