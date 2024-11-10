@@ -1,38 +1,42 @@
-SELECT 
-    computer_name AS "Computer Name",
-    MAX(custom_tags) AS "Custom Tags",
-    MAX(operating_system) AS "Operating System",
-    MAX(ipv4_address) AS "IPv4 Address",
-    MAX(tanium_client_core_health) AS "Tanium Client Core Health",
-    MAX(patch_has_enforced_scan_configuration) AS "Has Enforced Scan Configuration",
-    MAX(patch_is_process_running) AS "Is Process Running",
-    MAX(days_since_successful_scan) AS "Days Since Successful Scan",
-    MAX(patch_coverage_status_details) AS "Status Detail",
-    MAX(patch_scan_errors) AS "Patch Scan Error Message",
-    MAX(patch_deployment_errors) AS "Deployment Error Message",
-    MAX(staging_id) AS "Deployment ID",
-    MAX(created_time) AS "Latest Created Time",
-    COUNT(*) AS count
-FROM esh_main.ceh_tanium_core_and_patch_health
-WHERE patch_deployment_errors IS NOT NULL 
-  AND patch_deployment_errors != 'No Deployment Errors'
-GROUP BY computer_name
-ORDER BY count DESC;
-
-
-
-
-SELECT 
-    patch_deployment_errors AS "Deployment Error Message",
-    COUNT(*) AS count
-FROM (
-    SELECT 
-        patch_deployment_errors,
-        MAX(created_time) AS latest_created_time
+WITH filtered_data AS (
+    SELECT
+        computer_name,
+        custom_tags,
+        operating_system,
+        ipv4_address,
+        patch_scan_errors AS "Patch_Scan_Error_Message",
+        patch_deployment_errors ->> 'Error Message' AS "Deployment_Error_Message",
+        tanium_client_core_health,
+        patch_is_process_running,
+        days_since_successful_scan,
+        staging_id,
+        batch_id,
+        created_time,
+        bank_id,
+        patch_deployment_errors ->> 'Deployment ID' AS "Deployment_ID",
+        patch_deployment_errors ->> 'Detail' AS "Detail",
+        patch_scan_errors ->> 'Scan Error Message' AS "Scan_Error_Message",
+        patch_scan_errors ->> 'Days Since Successful Scan' AS "Days_Since_Successful_Scan"
     FROM esh_main.ceh_tanium_core_and_patch_health
-    WHERE patch_deployment_errors IS NOT NULL 
-      AND patch_deployment_errors != 'No Deployment Errors'
-    GROUP BY patch_deployment_errors
-) subquery
-GROUP BY "Deployment Error Message"
+    WHERE patch_deployment_errors ->> 'Error Message' != 'No Deployment Error Message'
+),
+latest_values AS (
+    SELECT
+        custom_tags,
+        MAX(operating_system) AS operating_system,
+        MAX(ipv4_address) AS ipv4_address,
+        MAX("Deployment_Error_Message") AS "Deployment_Error_Message",
+        MAX("Deployment_ID") AS "Deployment_ID",
+        MAX("Days_Since_Successful_Scan") AS "Days_Since_Successful_Scan",
+        MAX("Detail") AS "Detail",
+        MAX("Patch_Scan_Error_Message") AS "Patch_Scan_Error_Message",
+        computer_name
+    FROM filtered_data
+    GROUP BY computer_name, custom_tags
+)
+SELECT
+    COUNT(*) AS count,
+    "Deployment_Error_Message"
+FROM latest_values
+GROUP BY "Deployment_Error_Message"
 ORDER BY count DESC;
