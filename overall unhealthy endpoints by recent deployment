@@ -7,7 +7,9 @@ WITH expanded_data AS (
         jsonb_array_elements(patch_deployment_errors::jsonb) AS patch_deployment_error_element,
         tanium_client_core_health,
         patch_is_process_running,
-        days_since_successful_scan::TEXT AS days_since_successful_scan
+        days_since_successful_scan::TEXT AS days_since_successful_scan,
+        patch_has_enforced_scan_configuration,
+        client_health_tanium_client_version
     FROM esh_main.ceh_tn_tanium_core_and_patch_health
 ),
 filtered_data AS (
@@ -18,10 +20,14 @@ filtered_data AS (
         tanium_client_core_health,
         patch_is_process_running,
         days_since_successful_scan,
-        patch_deployment_error_element ->> 'Deployment ID' AS deployment_id
+        patch_has_enforced_scan_configuration,
+        client_health_tanium_client_version,
+        patch_scan_error_element ->> 'Error Message' AS patch_scan_error_message,
+        patch_deployment_error_element ->> 'Deployment ID' AS deployment_id,
+        patch_scan_error_element ->> 'Detail' AS detail
     FROM expanded_data
     WHERE 
-        (patch_deployment_error_element ->> 'Deployment ID') IS DISTINCT FROM 'results'
+        (patch_deployment_error_element ->> 'Deployment ID') NOT LIKE 'results%'
         AND (patch_deployment_error_element ->> 'Deployment ID') NOT LIKE 'TSE%'
 ),
 latest_values AS (
@@ -31,18 +37,26 @@ latest_values AS (
         MAX(tanium_client_core_health) AS tanium_client_core_health,
         MAX(patch_is_process_running) AS is_process_running,
         MAX(days_since_successful_scan) AS days_since_successful_scan,
+        MAX(patch_has_enforced_scan_configuration) AS enforced_scan_configuration,
+        MAX(client_health_tanium_client_version) AS tanium_client_version,
+        MAX(patch_scan_error_message) AS patch_scan_error_message,
         MAX(deployment_id) AS deployment_id,
+        MAX(detail) AS detail,
         computer_name
     FROM filtered_data
     GROUP BY computer_name, custom_tags
 )
 SELECT
-    deployment_id,
     computer_name,
     custom_tags,
     operating_system,
     tanium_client_core_health,
     is_process_running,
-    days_since_successful_scan
+    days_since_successful_scan,
+    enforced_scan_configuration,
+    tanium_client_version,
+    patch_scan_error_message,
+    deployment_id,
+    detail
 FROM latest_values
 ORDER BY deployment_id;
