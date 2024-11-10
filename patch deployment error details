@@ -1,0 +1,20 @@
+SELECT 
+    computer_name AS "Computer Name",
+    MAX(custom_tags) AS "Custom Tags",
+    MAX(operating_system) AS "Operating System",
+    MAX(ipv4_address) AS "IPv4 Address",
+    MAX(tanium_client_core_health) AS "Tanium Client Core Health",
+    MAX(patch_has_enforced_scan_configuration) AS "Has Enforced Scan Configuration",
+    MAX(patch_is_process_running) AS "Is Process Running",
+    MAX(days_since_successful_scan) AS "Days Since Successful Scan",
+    MAX(patch_coverage_status_details) AS "Status Detail",
+    MAX(patch_scan_errors) AS "Patch Scan Error Message",
+    MAX(patch_deployment_errors) AS "Deployment Error Message",
+    MAX(staging_id) AS "Deployment ID",
+    MAX(created_time) AS "Latest Created Time",
+    COUNT(*) AS count
+FROM esh_main.ceh_tanium_core_and_patch_health
+WHERE patch_deployment_errors IS NOT NULL 
+  AND patch_deployment_errors != 'No Deployment Errors'
+GROUP BY computer_name
+ORDER BY count DESC;
