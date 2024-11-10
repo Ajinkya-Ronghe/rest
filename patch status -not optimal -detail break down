@@ -7,10 +7,7 @@ WITH expanded_data AS (
         tanium_client_core_health,
         patch_is_process_running,
         days_since_successful_scan::TEXT AS days_since_successful_scan,
-        patch_has_enforced_scan_configuration AS enforced_scan_configuration,
-        patch_scan_error_element ->> 'Error Message' AS patch_scan_error_message,
-        patch_scan_error_element ->> 'Detail' AS detail,
-        patch_scan_error_element ->> 'Status' AS status
+        patch_has_enforced_scan_configuration AS enforced_scan_configuration
     FROM esh_main.ceh_tn_tanium_core_and_patch_health
 ),
 filtered_data AS (
@@ -22,11 +19,11 @@ filtered_data AS (
         patch_is_process_running,
         days_since_successful_scan,
         enforced_scan_configuration,
-        patch_scan_error_message,
-        detail,
-        status
+        patch_scan_error_element ->> 'Error Message' AS patch_scan_error_message,
+        patch_scan_error_element ->> 'Detail' AS detail,
+        patch_scan_error_element ->> 'Status' AS status
     FROM expanded_data
-    WHERE status = 'Optimal'
+    WHERE patch_scan_error_element ->> 'Status' = 'Optimal'
 ),
 latest_values AS (
     SELECT
