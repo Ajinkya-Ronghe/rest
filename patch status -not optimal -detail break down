@@ -4,12 +4,12 @@ WITH expanded_data AS (
         custom_tags,
         operating_system,
         jsonb_array_elements_text(patch_scan_errors::jsonb) AS patch_scan_error_element,
+        jsonb_array_elements_text(patch_coverage_status_details::jsonb) AS patch_status_detail_element,
         tanium_client_core_health,
         patch_is_process_running,
         days_since_successful_scan::TEXT AS days_since_successful_scan,
         patch_has_enforced_scan_configuration AS enforced_scan_configuration,
-        client_health_tanium_client_version AS tanium_client_version,
-        patch_coverage_status_details::jsonb AS patch_status_details
+        client_health_tanium_client_version AS tanium_client_version
     FROM esh_main.ceh_tn_tanium_core_and_patch_health
 ),
 filtered_data AS (
@@ -23,10 +23,10 @@ filtered_data AS (
         enforced_scan_configuration,
         tanium_client_version,
         patch_scan_error_element::jsonb ->> 'Error Message' AS patch_scan_error_message,
-        patch_status_details ->> 'Detail' AS detail,
-        patch_status_details ->> 'Status' AS status
+        patch_status_detail_element::jsonb ->> 'Detail' AS detail,
+        patch_status_detail_element::jsonb ->> 'Status' AS status
     FROM expanded_data
-    WHERE patch_status_details ->> 'Status' = 'Optimal'
+    WHERE patch_status_detail_element::jsonb ->> 'Status' = 'Optimal'
 ),
 latest_values AS (
     SELECT
