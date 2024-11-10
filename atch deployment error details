@@ -1,0 +1,36 @@
+WITH LatestData AS (
+    SELECT DISTINCT ON (computer_name) 
+        computer_name AS "Computer Name",
+        custom_tags AS "Custom Tags",
+        operating_system AS "Operating System",
+        ipv4_address AS "IPv4 Address",
+        tanium_client_core_health AS "Tanium Client Core Health",
+        patch_has_enforced_scan_configuration AS "Has Enforced Scan Configuration",
+        patch_is_process_running AS "Is Process Running",
+        days_since_successful_scan AS "Days Since Successful Scan",
+        patch_coverage_status_details AS "Status Detail",
+        patch_scan_errors AS "Patch Scan Error Message",
+        patch_deployment_errors AS "Deployment Error Message",
+        staging_id AS "Deployment ID",
+        created_time
+    FROM esh_main.ceh_tanium_core_and_patch_health
+    WHERE patch_deployment_errors IS NOT NULL 
+      AND patch_deployment_errors != 'No Deployment Errors'
+    ORDER BY computer_name, created_time DESC
+)
+SELECT 
+    "Computer Name",
+    "Custom Tags",
+    "Operating System",
+    "IPv4 Address",
+    "Tanium Client Core Health",
+    "Has Enforced Scan Configuration",
+    "Is Process Running",
+    "Days Since Successful Scan",
+    "Status Detail",
+    "Patch Scan Error Message",
+    "Deployment Error Message",
+    "Deployment ID",
+    COUNT(*) OVER (PARTITION BY "Deployment Error Message") AS count
+FROM LatestData
+ORDER BY count DESC;
