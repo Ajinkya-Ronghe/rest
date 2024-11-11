@@ -1,0 +1,71 @@
+WITH expanded_data AS (
+    SELECT
+        computer_name,
+        custom_tags,
+        operating_system,
+        ipv4_address,
+        jsonb_array_elements_text(patch_scan_errors::jsonb) AS patch_scan_error_element,
+        jsonb_array_elements_text(patch_coverage_status_details::jsonb) AS patch_status_detail_element,
+        jsonb_array_elements_text(patch_deployment_errors::jsonb) AS patch_deployment_error_element,
+        tanium_client_core_health,
+        patch_is_process_running,
+        days_since_successful_scan::TEXT AS days_since_successful_scan,
+        patch_has_enforced_scan_configuration AS enforced_scan_configuration,
+        client_health_tanium_client_version AS tanium_client_version
+    FROM esh_main.ceh_tn_tanium_core_and_patch_health
+    WHERE tanium_client_core_health != 'Healthy'
+),
+filtered_data AS (
+    SELECT
+        computer_name,
+        custom_tags,
+        operating_system,
+        ipv4_address,
+        tanium_client_version,
+        tanium_client_core_health,
+        patch_is_process_running,
+        days_since_successful_scan,
+        enforced_scan_configuration,
+        patch_scan_error_element::jsonb ->> 'Error Message' AS patch_scan_error_message,
+        patch_status_detail_element::jsonb ->> 'Detail' AS detail,
+        patch_status_detail_element::jsonb ->> 'Status' AS status,
+        patch_deployment_error_element::jsonb ->> 'Deployment ID' AS deployment_id,
+        patch_deployment_error_element::jsonb ->> 'Error Message' AS deployment_error_message
+    FROM expanded_data
+),
+latest_values AS (
+    SELECT
+        custom_tags,
+        MAX(operating_system) AS operating_system,
+        MAX(ipv4_address) AS ipv4_address,
+        MAX(tanium_client_version) AS tanium_client_version,
+        MAX(tanium_client_core_health) AS tanium_client_core_health,
+        MAX(enforced_scan_configuration) AS enforced_scan_configuration,
+        MAX(patch_is_process_running) AS is_process_running,
+        MAX(days_since_successful_scan) AS days_since_successful_scan,
+        MAX(status) AS status,
+        MAX(detail) AS detail,
+        MAX(patch_scan_error_message) AS patch_scan_error_message,
+        MAX(deployment_error_message) AS deployment_error_message,
+        MAX(deployment_id) AS deployment_id,
+        computer_name
+    FROM filtered_data
+    GROUP BY computer_name, custom_tags
+)
+SELECT
+    computer_name,
+    custom_tags,
+    operating_system,
+    ipv4_address,
+    tanium_client_version,
+    tanium_client_core_health,
+    enforced_scan_configuration,
+    is_process_running,
+    days_since_successful_scan,
+    status,
+    detail,
+    patch_scan_error_message,
+    deployment_error_message,
+    deployment_id
+FROM latest_values
+ORDER BY tanium_client_core_health;
