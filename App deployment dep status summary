@@ -2,14 +2,18 @@ WITH total_status_count AS (
     SELECT 
         COUNT(*) AS total_records
     FROM esh_main.ceh_tn_splunk_custom_deploy_sensor
-    WHERE CAST("time" AS TIMESTAMP) >= NOW() - INTERVAL '90 days'
+    WHERE "time" IS NOT NULL 
+      AND TRY_CAST("time" AS TIMESTAMP) IS NOT NULL
+      AND CAST("time" AS TIMESTAMP) >= NOW() - INTERVAL '90 days'
 ),
 status_counts AS (
     SELECT 
         status,
         COUNT(*) AS status_count
     FROM esh_main.ceh_tn_splunk_custom_deploy_sensor
-    WHERE CAST("time" AS TIMESTAMP) >= NOW() - INTERVAL '90 days'
+    WHERE "time" IS NOT NULL 
+      AND TRY_CAST("time" AS TIMESTAMP) IS NOT NULL
+      AND CAST("time" AS TIMESTAMP) >= NOW() - INTERVAL '90 days'
     GROUP BY status
 )
 SELECT 
