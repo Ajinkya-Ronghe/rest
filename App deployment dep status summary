@@ -1,0 +1,21 @@
+WITH total_status_count AS (
+    SELECT 
+        COUNT(*) AS total_records
+    FROM esh_main.ceh_tn_splunk_custom_deploy_sensor
+    WHERE "time" >= NOW() - INTERVAL '90 days'
+),
+status_counts AS (
+    SELECT 
+        status,
+        COUNT(*) AS status_count
+    FROM esh_main.ceh_tn_splunk_custom_deploy_sensor
+    WHERE "time" >= NOW() - INTERVAL '90 days'
+    GROUP BY status
+)
+SELECT 
+    sc.status,
+    sc.status_count,
+    ROUND((sc.status_count::DECIMAL / tsc.total_records) * 100, 2) AS percentage
+FROM status_counts sc
+CROSS JOIN total_status_count tsc
+ORDER BY sc.status;
