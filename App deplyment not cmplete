@@ -1,0 +1,29 @@
+WITH filtered_data AS (
+    SELECT 
+        computer_name,
+        operating_system,
+        custom_tags,
+        name,
+        status,
+        sub_status,
+        CAST("time" AS TIMESTAMP) AS deploy_time
+    FROM esh_main.ceh_tn_splunk_custom_deploy_sensor
+    WHERE "time" IS NOT NULL
+      AND "time" ~ '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?Z$'
+      AND CAST("time" AS TIMESTAMP) >= NOW() - INTERVAL '90 days'
+      AND status <> 'Success'
+),
+status_name_counts AS (
+    SELECT 
+        status,
+        name,
+        COUNT(*) AS count_by_status_name
+    FROM filtered_data
+    GROUP BY status, name
+)
+SELECT 
+    status,
+    name,
+    count_by_status_name
+FROM status_name_counts
+ORDER BY status, name;
