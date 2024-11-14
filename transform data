@@ -1,0 +1,26 @@
+ public static List<Map<String, Object>> transformData(List<Map<String, String>> inputData) {
+        // Group by 'name'
+        Map<String, List<Map<String, String>>> groupedByName = inputData.stream()
+            .collect(Collectors.groupingBy(entry -> entry.get("name")));
+
+        // Transform grouped data
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (Map.Entry<String, List<Map<String, String>>> entry : groupedByName.entrySet()) {
+            String name = entry.getKey();
+            List<Map<String, String>> group = entry.getValue();
+
+            // Extract 'count' and 'status' lists
+            List<String> counts = group.stream().map(item -> item.get("count")).collect(Collectors.toList());
+            List<String> statuses = group.stream().map(item -> item.get("status")).collect(Collectors.toList());
+
+            // Create the output map
+            Map<String, Object> transformedEntry = new HashMap<>();
+            transformedEntry.put("name", name);
+            transformedEntry.put("count", counts);
+            transformedEntry.put("status", statuses);
+
+            result.add(transformedEntry);
+        }
+
+        return result;
+    }
