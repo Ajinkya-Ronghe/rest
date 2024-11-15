@@ -428,3 +428,10 @@ if __name__ == "__main__":
     hashed_password = generate_hashed_password(raw_password)
     print(f"Hashed Password: {hashed_password}")
 
+
+
+logging.level.org.springframework=DEBUG
+logging.level.org.springframework.security=DEBUG
+logging.level.org.hibernate.SQL=DEBUG
+
+
