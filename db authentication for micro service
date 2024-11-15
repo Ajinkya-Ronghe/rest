@@ -396,3 +396,35 @@ Use Postman to test the endpoints:
 Access http://localhost:8082/api/testconnection without authentication.
 Access other endpoints with Basic Authentication using credentials stored in your database.
 This approach ensures a clean separation between query definitions and security configuration, improving maintainability and scalability. Let me know if you need further assistance!
+
+
+
+
+
+
+
+
+
+
+
+
+import bcrypt
+
+def generate_hashed_password(raw_password):
+    # Encode the password to bytes
+    raw_password_bytes = raw_password.encode('utf-8')
+    
+    # Generate a salt
+    salt = bcrypt.gensalt()
+    
+    # Generate the hashed password
+    hashed_password = bcrypt.hashpw(raw_password_bytes, salt)
+    
+    return hashed_password.decode('utf-8')  # Convert bytes to string for storage
+
+if __name__ == "__main__":
+    # Enter the raw password you want to hash
+    raw_password = input("Enter the password to hash: ")
+    hashed_password = generate_hashed_password(raw_password)
+    print(f"Hashed Password: {hashed_password}")
+
