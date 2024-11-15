@@ -434,4 +434,8 @@ logging.level.org.springframework=DEBUG
 logging.level.org.springframework.security=DEBUG
 logging.level.org.hibernate.SQL=DEBUG
 
+logging.level.org.springframework.jdbc.core=DEBUG
+logging.level.org.springframework.jdbc.datasource=DEBUG
+logging.level.org.springframework.jdbc.support=DEBUG
+
 
