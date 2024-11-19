@@ -1,0 +1,13 @@
+import bcrypt
+
+# Hashed password (e.g., from your database)
+hashed_password = b"$2b$12$yW3.dzvErL/eZnS69e6A0e9bDShKNKUEA0bH.RC3yKqlKZLqDZ3DS"
+
+# Raw password (user input)
+raw_password = "mysecretpassword"
+
+# Check if the raw password matches the hashed password
+if bcrypt.checkpw(raw_password.encode('utf-8'), hashed_password):
+    print("Password matches!")
+else:
+    print("Password does not match!")
