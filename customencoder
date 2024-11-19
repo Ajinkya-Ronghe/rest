@@ -1,24 +1,21 @@
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import java.security.SecureRandom;
-import org.mindrot.jbcrypt.BCrypt;
 
 public class CustomBcryptPasswordEncoder implements PasswordEncoder {
 
-    private final int strength;
+    private final BCryptPasswordEncoder bCryptPasswordEncoder;
 
     public CustomBcryptPasswordEncoder(int strength) {
-        this.strength = strength; // Number of log rounds for BCrypt
+        this.bCryptPasswordEncoder = new BCryptPasswordEncoder(strength); // Initialize with desired strength
     }
 
     @Override
     public String encode(CharSequence rawPassword) {
-        // Encoding is optional in your case since passwords are pre-hashed
-        return BCrypt.hashpw(rawPassword.toString(), BCrypt.gensalt(strength));
+        return bCryptPasswordEncoder.encode(rawPassword); // Encode raw password
     }
 
     @Override
     public boolean matches(CharSequence rawPassword, String encodedPassword) {
-        // Use bcrypt to verify raw password against the hashed password
-        return BCrypt.checkpw(rawPassword.toString(), encodedPassword);
+        return bCryptPasswordEncoder.matches(rawPassword, encodedPassword); // Verify raw password
     }
 }
