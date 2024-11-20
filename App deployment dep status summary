@@ -28,13 +28,15 @@ ranked_statuses AS (
 final_result AS (
     SELECT 
         status,
-        count_by_status
+        count_by_status,
+        NULL AS others_count -- No "Other" count for top statuses
     FROM ranked_statuses
     WHERE rank <= 7
     UNION ALL
     SELECT 
-        'Other' AS status,
-        SUM(count_by_status) AS count_by_status
+        'Other (' || COUNT(*) || ')' AS status,
+        SUM(count_by_status) AS count_by_status,
+        COUNT(*) AS others_count -- Count of remaining statuses
     FROM ranked_statuses
     WHERE rank > 7
 )
@@ -44,6 +46,6 @@ SELECT
 FROM final_result
 ORDER BY 
     CASE 
-        WHEN status = 'Other' THEN 9999
+        WHEN status LIKE 'Other (%)' THEN 9999
         ELSE count_by_status 
     END DESC, status;
