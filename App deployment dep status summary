@@ -10,7 +10,6 @@ WITH filtered_data AS (
     WHERE "time" IS NOT NULL
       AND "time" ~ '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?Z$'
       AND CAST("time" AS TIMESTAMP) >= NOW() - INTERVAL '90 days'
-    GROUP BY computer_name, custom_tags, name, status, sub_status, CAST("time" AS TIMESTAMP)
 ),
 status_counts AS (
     SELECT 
@@ -18,9 +17,33 @@ status_counts AS (
         COUNT(*) AS count_by_status
     FROM filtered_data
     GROUP BY status
+),
+ranked_statuses AS (
+    SELECT 
+        status,
+        count_by_status,
+        ROW_NUMBER() OVER (ORDER BY count_by_status DESC) AS rank
+    FROM status_counts
+),
+final_result AS (
+    SELECT 
+        status,
+        count_by_status
+    FROM ranked_statuses
+    WHERE rank <= 7
+    UNION ALL
+    SELECT 
+        'Other' AS status,
+        SUM(count_by_status) AS count_by_status
+    FROM ranked_statuses
+    WHERE rank > 7
 )
 SELECT 
     status,
     count_by_status
-FROM status_counts
-ORDER BY status;
+FROM final_result
+ORDER BY 
+    CASE 
+        WHEN status = 'Other' THEN 9999
+        ELSE count_by_status 
+    END DESC, status;
