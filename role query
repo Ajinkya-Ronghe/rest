@@ -1,0 +1,5 @@
+SELECT ? AS username, ur.role AS authority
+FROM esh_user_roles ur
+JOIN esh_org_membership om ON ur.role_id = om.role_id
+JOIN esh_user u ON om.user_id = u.id
+WHERE u.user_id = ?
