@@ -1,7 +1,6 @@
 WITH filtered_data AS (
     SELECT 
         computer_name,
-        operating_system,
         custom_tags,
         name,
         status,
@@ -13,15 +12,40 @@ WITH filtered_data AS (
       AND CAST("time" AS TIMESTAMP) >= NOW() - INTERVAL '90 days'
       AND status = 'Success'
 ),
-status_count_by_name AS (
+name_counts AS (
     SELECT 
         name,
         COUNT(*) AS count_by_name
     FROM filtered_data
     GROUP BY name
+),
+ranked_names AS (
+    SELECT 
+        name,
+        count_by_name,
+        ROW_NUMBER() OVER (ORDER BY count_by_name DESC) AS rank
+    FROM name_counts
+),
+final_result AS (
+    SELECT 
+        name,
+        count_by_name
+    FROM ranked_names
+    WHERE rank <= 7
+    UNION ALL
+    SELECT 
+        'Other (' || COUNT(*) || ')' AS name,
+        SUM(count_by_name) AS count_by_name
+    FROM ranked_names
+    WHERE rank > 7
+    HAVING COUNT(*) > 0 -- Only include "Other" if there are remaining names
 )
 SELECT 
     name,
     count_by_name
-FROM status_count_by_name
-ORDER BY name;
+FROM final_result
+ORDER BY 
+    CASE 
+        WHEN name LIKE 'Other (%)' THEN 9999
+        ELSE count_by_name 
+    END DESC, name;
