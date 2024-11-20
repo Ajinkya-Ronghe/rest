@@ -1,5 +1,5 @@
-WITH filtered_data AS (
-    SELECT 
+WITH distinct_computers AS (
+    SELECT DISTINCT ON (computer_name)
         computer_name,
         custom_tags,
         name,
@@ -16,7 +16,7 @@ name_counts AS (
     SELECT 
         name,
         COUNT(*) AS count_by_name
-    FROM filtered_data
+    FROM distinct_computers
     GROUP BY name
 ),
 ranked_names AS (
