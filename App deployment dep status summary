@@ -28,17 +28,16 @@ ranked_statuses AS (
 final_result AS (
     SELECT 
         status,
-        count_by_status,
-        NULL AS others_count -- No "Other" count for top statuses
+        count_by_status
     FROM ranked_statuses
     WHERE rank <= 7
     UNION ALL
     SELECT 
         'Other (' || COUNT(*) || ')' AS status,
-        SUM(count_by_status) AS count_by_status,
-        COUNT(*) AS others_count -- Count of remaining statuses
+        SUM(count_by_status) AS count_by_status
     FROM ranked_statuses
     WHERE rank > 7
+    HAVING COUNT(*) > 0 -- Only include "Other" if there are remaining statuses
 )
 SELECT 
     status,
