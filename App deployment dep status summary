@@ -1,4 +1,9 @@
-WITH deduped_data AS (
+WITH days_calculated AS (
+    SELECT
+        NOW() AS current_time,
+        NOW() - INTERVAL '90 days' AS daysago_epoch -- Equivalent of `daysago = now - 7776000 seconds`
+),
+deduped_data AS (
     SELECT DISTINCT ON (computer_name) 
         computer_name,
         custom_tags,
@@ -10,14 +15,15 @@ WITH deduped_data AS (
 ),
 filtered_data AS (
     SELECT 
-        computer_name,
-        custom_tags,
-        name,
-        status,
-        sub_status,
-        TO_CHAR(TO_TIMESTAMP("time", 'YYYY-MM-DD"T"HH24:MI"Z"'), 'MM/DD/YYYY') AS deploy_time
-    FROM deduped_data
-    WHERE EXTRACT(EPOCH FROM NOW()) - 7776000 <= EXTRACT(EPOCH FROM TO_TIMESTAMP("time", 'YYYY-MM-DD"T"HH24:MI"Z"'))
+        d.computer_name,
+        d.custom_tags,
+        d.name,
+        d.status,
+        d.sub_status,
+        TO_CHAR(TO_TIMESTAMP(d."time", 'YYYY-MM-DD"T"HH24:MI"Z"'), 'MM/DD/YYYY') AS deploy_time,
+        TO_TIMESTAMP(d."time", 'YYYY-MM-DD"T"HH24:MI"Z"') AS unix_timestamp
+    FROM deduped_data d, days_calculated dc
+    WHERE TO_TIMESTAMP(d."time", 'YYYY-MM-DD"T"HH24:MI"Z"') >= dc.daysago_epoch
 )
 SELECT 
     status,
