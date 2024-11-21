@@ -14,7 +14,7 @@ deduped_data AS (
     FROM esh_main.ceh_tn_splunk_custom_deploy_sensor
 ),
 filtered_data AS (
-    SELECT
+    SELECT 
         d.computer_name,
         d.custom_tags,
         d.name,
@@ -23,47 +23,39 @@ filtered_data AS (
         TO_CHAR(TO_TIMESTAMP(d."time", 'YYYY-MM-DD"T"HH24:MI"Z"'), 'MM/DD/YYYY') AS deploy_time,
         TO_TIMESTAMP(d."time", 'YYYY-MM-DD"T"HH24:MI"Z"') AS unix_timestamp
     FROM deduped_data d, days_calculated dc
-    WHERE TO_TIMESTAMP(d."time", 'YYYY-MM-DD"T"HH24:MI"Z"') >= dc.daysago_epoch
-      AND d.status = 'Success'
+    WHERE TO_TIMESTAMP(d."time", 'YYYY-MM-DD"T"HH24:MI"Z"') > dc.daysago_epoch
+        AND d.status = 'Success'
 ),
 name_counts AS (
-    SELECT
-        computer_name AS name,
+    SELECT 
+        name,
         COUNT(*) AS count
     FROM filtered_data
-    GROUP BY computer_name
+    GROUP BY name
 ),
-ranked_names AS (
-    SELECT
+top_names AS (
+    SELECT 
         name,
-        count,
-        ROW_NUMBER() OVER (ORDER BY count DESC) AS rank
+        count
     FROM name_counts
+    ORDER BY count DESC
+    LIMIT 7
 ),
-grouped_names AS (
-    SELECT
-        CASE
-            WHEN rank <= 7 THEN name
-            ELSE 'Other'
-        END AS grouped_name,
-        CASE
-            WHEN rank <= 7 THEN count
-            ELSE NULL
-        END AS individual_count
-    FROM ranked_names
-),
-final_result AS (
-    SELECT
-        grouped_name AS name,
-        SUM(COALESCE(individual_count, count)) AS total_count
-    FROM grouped_names
-    LEFT JOIN (
-        SELECT 'Other' AS grouped_name, SUM(count) AS count
-        FROM ranked_names
-        WHERE rank > 7
-    ) AS other_counts USING (grouped_name)
-    GROUP BY grouped_name
+other_names AS (
+    SELECT 
+        CONCAT('Other(', SUM(count), ')') AS name,
+        SUM(count) AS count
+    FROM name_counts
+    WHERE name NOT IN (SELECT name FROM top_names)
+    HAVING SUM(count) > 0
 )
-SELECT name, total_count AS count
-FROM final_result
+SELECT 
+    name,
+    count
+FROM top_names
+UNION ALL
+SELECT 
+    name,
+    count
+FROM other_names
 ORDER BY count DESC;
