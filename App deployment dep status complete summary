@@ -40,6 +40,75 @@ ranked_names AS (
         ROW_NUMBER() OVER (ORDER BY count DESC) AS rank
     FROM name_counts
 ),
+grouped_names AS (
+    SELECT
+        CASE
+            WHEN rank <= 7 THEN name
+            ELSE 'Other'
+        END AS grouped_name,
+        CASE
+            WHEN rank <= 7 THEN count
+            ELSE NULL
+        END AS individual_count
+    FROM ranked_names
+),
+final_result AS (
+    SELECT
+        grouped_name AS name,
+        SUM(COALESCE(individual_count, count)) AS total_count
+    FROM grouped_names
+    LEFT JOIN (
+        SELECT 'Other' AS grouped_name, SUM(count) AS count
+        FROM ranked_names
+        WHERE rank > 7
+    ) AS other_counts USING (grouped_name)
+    GROUP BY grouped_name
+)
+SELECT name, total_count AS count
+FROM final_result
+ORDER BY count DESC;
+WITH days_calculated AS (
+    SELECT
+        NOW() AS current_time,
+        NOW() - INTERVAL '90 days' AS daysago_epoch
+),
+deduped_data AS (
+    SELECT DISTINCT ON (computer_name)
+        computer_name,
+        custom_tags,
+        name,
+        status,
+        sub_status,
+        "time"
+    FROM esh_main.ceh_tn_splunk_custom_deploy_sensor
+),
+filtered_data AS (
+    SELECT
+        d.computer_name,
+        d.custom_tags,
+        d.name,
+        d.status,
+        d.sub_status,
+        TO_CHAR(TO_TIMESTAMP(d."time", 'YYYY-MM-DD"T"HH24:MI"Z"'), 'MM/DD/YYYY') AS deploy_time,
+        TO_TIMESTAMP(d."time", 'YYYY-MM-DD"T"HH24:MI"Z"') AS unix_timestamp
+    FROM deduped_data d, days_calculated dc
+    WHERE TO_TIMESTAMP(d."time", 'YYYY-MM-DD"T"HH24:MI"Z"') >= dc.daysago_epoch
+      AND d.status = 'Success'
+),
+name_counts AS (
+    SELECT
+        computer_name AS name,
+        COUNT(*) AS count
+    FROM filtered_data
+    GROUP BY computer_name
+),
+ranked_names AS (
+    SELECT
+        name,
+        count,
+        ROW_NUMBER() OVER (ORDER BY count DESC) AS rank
+    FROM name_counts
+),
 top_7_and_other AS (
     SELECT 
         CASE 
