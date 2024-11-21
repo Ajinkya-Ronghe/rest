@@ -1,50 +1,26 @@
-WITH filtered_data AS (
+WITH deduped_data AS (
+    SELECT DISTINCT ON (computer_name) 
+        computer_name,
+        custom_tags,
+        name,
+        status,
+        sub_status,
+        "time" AS deploy_time
+    FROM esh_main.ceh_tn_splunk_custom_deploy_sensor
+),
+filtered_data AS (
     SELECT 
         computer_name,
         custom_tags,
         name,
         status,
         sub_status,
-        CAST("time" AS TIMESTAMP) AS deploy_time
-    FROM esh_main.ceh_tn_splunk_custom_deploy_sensor
-    WHERE "time" IS NOT NULL
-      AND "time" ~ '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?Z$'
-      AND CAST("time" AS TIMESTAMP) >= NOW() - INTERVAL '90 days'
-),
-status_counts AS (
-    SELECT 
-        status,
-        COUNT(*) AS count_by_status
-    FROM filtered_data
-    GROUP BY status
-),
-ranked_statuses AS (
-    SELECT 
-        status,
-        count_by_status,
-        ROW_NUMBER() OVER (ORDER BY count_by_status DESC) AS rank
-    FROM status_counts
-),
-final_result AS (
-    SELECT 
-        status,
-        count_by_status
-    FROM ranked_statuses
-    WHERE rank <= 7
-    UNION ALL
-    SELECT 
-        'Other (' || COUNT(*) || ')' AS status,
-        SUM(count_by_status) AS count_by_status
-    FROM ranked_statuses
-    WHERE rank > 7
-    HAVING COUNT(*) > 0 -- Only include "Other" if there are remaining statuses
+        TO_CHAR(TO_TIMESTAMP("time", 'YYYY-MM-DD"T"HH24:MI"Z"'), 'MM/DD/YYYY') AS deploy_time
+    FROM deduped_data
+    WHERE EXTRACT(EPOCH FROM NOW()) - 7776000 <= EXTRACT(EPOCH FROM TO_TIMESTAMP("time", 'YYYY-MM-DD"T"HH24:MI"Z"'))
 )
 SELECT 
     status,
-    count_by_status
-FROM final_result
-ORDER BY 
-    CASE 
-        WHEN status LIKE 'Other (%)' THEN 9999
-        ELSE count_by_status 
-    END DESC, status;
+    COUNT(*) AS count
+FROM filtered_data
+GROUP BY status;
