@@ -45,11 +45,13 @@ top_status_substatus AS (
 ),
 other_status_substatus AS (
     SELECT 
-        'Other' AS status,
-        NULL AS sub_status,
+        'Other(' || SUM(count) || ')' AS status, -- Label "Other" with count in parentheses
+        'Grouped Sub-Status' AS sub_status,     -- Assign a generic label for sub-status
         SUM(count) AS count
     FROM status_substatus_counts
-    WHERE status NOT IN (SELECT status FROM top_status_substatus)
+    WHERE (status, sub_status) NOT IN (
+        SELECT status, sub_status FROM top_status_substatus
+    )
     HAVING SUM(count) > 0
 )
 SELECT 
@@ -59,8 +61,8 @@ SELECT
 FROM top_status_substatus
 UNION ALL
 SELECT 
-    CONCAT('Other(', SUM(count), ')') AS status,
-    NULL AS sub_status,
-    SUM(count) AS count
+    status,
+    sub_status,
+    count
 FROM other_status_substatus
 ORDER BY count DESC;
