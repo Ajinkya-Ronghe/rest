@@ -39,14 +39,32 @@ ranked_statuses AS (
         ROW_NUMBER() OVER (ORDER BY count DESC) AS rank -- Ranks statuses by their count in descending order
     FROM status_counts
 ),
-final_result AS (
+top_7_and_other AS (
     SELECT 
         CASE 
-            WHEN rank <= 7 THEN status -- Keep top 7 statuses
-            ELSE 'Other(' || SUM(count) OVER () - SUM(CASE WHEN rank <= 7 THEN count ELSE 0 END) || ')' -- Group others
+            WHEN rank <= 7 THEN status
+            ELSE 'Other' -- Assign "Other" to all ranks beyond 7
         END AS grouped_status,
-        COUNT(*) AS total_count -- Count how many rows are grouped
+        CASE 
+            WHEN rank <= 7 THEN count
+            ELSE 0 -- For "Other", we will sum up the counts later
+        END AS individual_count,
+        rank
     FROM ranked_statuses
+),
+final_result AS (
+    SELECT 
+        grouped_status,
+        SUM(individual_count) + 
+        CASE 
+            WHEN grouped_status = 'Other' THEN (
+                SELECT SUM(count) 
+                FROM ranked_statuses 
+                WHERE rank > 7
+            )
+            ELSE 0
+        END AS total_count
+    FROM top_7_and_other
     GROUP BY grouped_status
 )
 SELECT * FROM final_result;
