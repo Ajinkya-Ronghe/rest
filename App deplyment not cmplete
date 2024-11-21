@@ -1,29 +1,68 @@
-WITH filtered_data AS (
-    SELECT 
+WITH days_calculated AS (
+    SELECT
+        NOW() AS current_time,
+        NOW() - INTERVAL '90 days' AS daysago_epoch
+),
+deduped_data AS (
+    SELECT DISTINCT ON (computer_name)
         computer_name,
-        operating_system,
         custom_tags,
         name,
         status,
         sub_status,
-        CAST("time" AS TIMESTAMP) AS deploy_time
+        "time"
     FROM esh_main.ceh_tn_splunk_custom_deploy_sensor
-    WHERE "time" IS NOT NULL
-      AND "time" ~ '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?Z$'
-      AND CAST("time" AS TIMESTAMP) >= NOW() - INTERVAL '90 days'
-      AND status <> 'Success'
+),
+filtered_data AS (
+    SELECT 
+        d.computer_name,
+        d.custom_tags,
+        d.name,
+        d.status,
+        d.sub_status,
+        TO_CHAR(TO_TIMESTAMP(d."time", 'YYYY-MM-DD"T"HH24:MI"Z"'), 'MM/DD/YYYY') AS deploy_time,
+        TO_TIMESTAMP(d."time", 'YYYY-MM-DD"T"HH24:MI"Z"') AS unix_timestamp
+    FROM deduped_data d, days_calculated dc
+    WHERE TO_TIMESTAMP(d."time", 'YYYY-MM-DD"T"HH24:MI"Z"') > dc.daysago_epoch
+        AND d.status != 'Success'
 ),
 status_name_counts AS (
     SELECT 
         status,
         name,
-        COUNT(*) AS count_by_status_name
+        COUNT(*) AS count
     FROM filtered_data
     GROUP BY status, name
+),
+top_statuses_names AS (
+    SELECT 
+        status,
+        name,
+        count
+    FROM status_name_counts
+    ORDER BY count DESC
+    LIMIT 7
+),
+other_statuses_names AS (
+    SELECT 
+        'Other' AS status,
+        name,
+        SUM(count) AS count
+    FROM status_name_counts
+    WHERE status NOT IN (SELECT status FROM top_statuses_names)
+    GROUP BY name
+    HAVING SUM(count) > 0
 )
 SELECT 
     status,
     name,
-    count_by_status_name
-FROM status_name_counts
-ORDER BY status, name;
+    count
+FROM top_statuses_names
+UNION ALL
+SELECT 
+    CONCAT('Other(', SUM(count), ')') AS status,
+    name,
+    SUM(count) AS count
+FROM other_statuses_names
+GROUP BY name
+ORDER BY count DESC;
