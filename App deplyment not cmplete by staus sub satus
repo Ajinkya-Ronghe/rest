@@ -1,27 +1,66 @@
-WITH filtered_data AS (
-    SELECT 
+WITH days_calculated AS (
+    SELECT
+        NOW() AS current_time,
+        NOW() - INTERVAL '90 days' AS daysago_epoch
+),
+deduped_data AS (
+    SELECT DISTINCT ON (computer_name)
         computer_name,
-        operating_system,
         custom_tags,
         name,
         status,
         sub_status,
-        CAST("time" AS TIMESTAMP) AS deploy_time
+        "time"
     FROM esh_main.ceh_tn_splunk_custom_deploy_sensor
-    WHERE "time" IS NOT NULL
-      AND "time" ~ '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?Z$'
-      AND CAST("time" AS TIMESTAMP) >= NOW() - INTERVAL '90 days'
-      AND status <> 'Success'
 ),
-status_counts AS (
+filtered_data AS (
+    SELECT 
+        d.computer_name,
+        d.custom_tags,
+        d.name,
+        d.status,
+        d.sub_status,
+        TO_CHAR(TO_TIMESTAMP(d."time", 'YYYY-MM-DD"T"HH24:MI"Z"'), 'MM/DD/YYYY') AS deploy_time,
+        TO_TIMESTAMP(d."time", 'YYYY-MM-DD"T"HH24:MI"Z"') AS unix_timestamp
+    FROM deduped_data d, days_calculated dc
+    WHERE TO_TIMESTAMP(d."time", 'YYYY-MM-DD"T"HH24:MI"Z"') > dc.daysago_epoch
+        AND d.status != 'Success'
+),
+status_substatus_counts AS (
     SELECT 
         status,
-        COUNT(*) AS count_by_status
+        sub_status,
+        COUNT(*) AS count
     FROM filtered_data
-    GROUP BY status
+    GROUP BY status, sub_status
+),
+top_status_substatus AS (
+    SELECT 
+        status,
+        sub_status,
+        count
+    FROM status_substatus_counts
+    ORDER BY count DESC
+    LIMIT 7
+),
+other_status_substatus AS (
+    SELECT 
+        'Other' AS status,
+        NULL AS sub_status,
+        SUM(count) AS count
+    FROM status_substatus_counts
+    WHERE status NOT IN (SELECT status FROM top_status_substatus)
+    HAVING SUM(count) > 0
 )
 SELECT 
     status,
-    count_by_status
-FROM status_counts
-ORDER BY status;
+    sub_status,
+    count
+FROM top_status_substatus
+UNION ALL
+SELECT 
+    CONCAT('Other(', SUM(count), ')') AS status,
+    NULL AS sub_status,
+    SUM(count) AS count
+FROM other_status_substatus
+ORDER BY count DESC;
