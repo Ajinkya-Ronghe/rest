@@ -1,7 +1,7 @@
 WITH days_calculated AS (
     SELECT
         NOW() AS current_time,
-        NOW() - INTERVAL '90 days' AS daysago_epoch -- Equivalent of `daysago = now - 7776000 seconds`
+        NOW() - INTERVAL '90 days' AS daysago_epoch -- Calculates `daysago`
 ),
 deduped_data AS (
     SELECT DISTINCT ON (computer_name) 
@@ -10,7 +10,7 @@ deduped_data AS (
         name,
         status,
         sub_status,
-        "time" AS deploy_time
+        "time" -- Keep the raw "time" field here for further processing
     FROM esh_main.ceh_tn_splunk_custom_deploy_sensor
 ),
 filtered_data AS (
@@ -20,13 +20,33 @@ filtered_data AS (
         d.name,
         d.status,
         d.sub_status,
-        TO_CHAR(TO_TIMESTAMP(d."time", 'YYYY-MM-DD"T"HH24:MI"Z"'), 'MM/DD/YYYY') AS deploy_time,
-        TO_TIMESTAMP(d."time", 'YYYY-MM-DD"T"HH24:MI"Z"') AS unix_timestamp
+        TO_CHAR(TO_TIMESTAMP(d."time", 'YYYY-MM-DD"T"HH24:MI"Z"'), 'MM/DD/YYYY') AS deploy_time, -- Converts "time" to formatted Deploy_Time
+        TO_TIMESTAMP(d."time", 'YYYY-MM-DD"T"HH24:MI"Z"') AS unix_timestamp -- Converts "time" to a proper timestamp for comparison
     FROM deduped_data d, days_calculated dc
-    WHERE TO_TIMESTAMP(d."time", 'YYYY-MM-DD"T"HH24:MI"Z"') >= dc.daysago_epoch
+    WHERE TO_TIMESTAMP(d."time", 'YYYY-MM-DD"T"HH24:MI"Z"') >= dc.daysago_epoch -- Compares with `daysago`
+),
+status_counts AS (
+    SELECT 
+        status,
+        COUNT(*) AS count
+    FROM filtered_data
+    GROUP BY status
+),
+ranked_statuses AS (
+    SELECT 
+        status,
+        count,
+        ROW_NUMBER() OVER (ORDER BY count DESC) AS rank -- Ranks statuses by their count in descending order
+    FROM status_counts
+),
+final_result AS (
+    SELECT 
+        CASE 
+            WHEN rank <= 7 THEN status -- Keep top 7 statuses
+            ELSE 'Other(' || SUM(count) OVER () - SUM(CASE WHEN rank <= 7 THEN count ELSE 0 END) || ')' -- Group others
+        END AS grouped_status,
+        COUNT(*) AS total_count -- Count how many rows are grouped
+    FROM ranked_statuses
+    GROUP BY grouped_status
 )
-SELECT 
-    status,
-    COUNT(*) AS count
-FROM filtered_data
-GROUP BY status;
+SELECT * FROM final_result;
