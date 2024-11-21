@@ -1,0 +1,1 @@
+eval formatted_time=strftime(_time, "%Y-%m-%d %H:%M:%S")
