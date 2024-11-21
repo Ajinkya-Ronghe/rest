@@ -1,51 +1,40 @@
-WITH distinct_computers AS (
+WITH days_calculated AS (
+    SELECT
+        NOW() AS current_time,
+        NOW() - INTERVAL '90 days' AS daysago_epoch
+),
+deduped_data AS (
     SELECT DISTINCT ON (computer_name)
         computer_name,
         custom_tags,
         name,
         status,
         sub_status,
-        CAST("time" AS TIMESTAMP) AS deploy_time
+        "time"
     FROM esh_main.ceh_tn_splunk_custom_deploy_sensor
-    WHERE "time" IS NOT NULL
-      AND "time" ~ '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?Z$'
-      AND CAST("time" AS TIMESTAMP) >= NOW() - INTERVAL '90 days'
-      AND status = 'Success'
+),
+filtered_data AS (
+    SELECT
+        d.computer_name,
+        d.custom_tags,
+        d.name,
+        d.status,
+        d.sub_status,
+        TO_CHAR(TO_TIMESTAMP(d."time", 'YYYY-MM-DD"T"HH24:MI"Z"'), 'MM/DD/YYYY') AS deploy_time,
+        TO_TIMESTAMP(d."time", 'YYYY-MM-DD"T"HH24:MI"Z"') AS unix_timestamp
+    FROM deduped_data d, days_calculated dc
+    WHERE TO_TIMESTAMP(d."time", 'YYYY-MM-DD"T"HH24:MI"Z"') >= dc.daysago_epoch
+      AND d.status = 'Success'
 ),
 name_counts AS (
-    SELECT 
-        name,
-        COUNT(*) AS count_by_name
-    FROM distinct_computers
-    GROUP BY name
-),
-ranked_names AS (
-    SELECT 
-        name,
-        count_by_name,
-        ROW_NUMBER() OVER (ORDER BY count_by_name DESC) AS rank
-    FROM name_counts
-),
-final_result AS (
-    SELECT 
-        name,
-        count_by_name
-    FROM ranked_names
-    WHERE rank <= 7
-    UNION ALL
-    SELECT 
-        'Other (' || COUNT(*) || ')' AS name,
-        SUM(count_by_name) AS count_by_name
-    FROM ranked_names
-    WHERE rank > 7
-    HAVING COUNT(*) > 0 -- Only include "Other" if there are remaining names
+    SELECT
+        computer_name AS name,
+        COUNT(*) AS count
+    FROM filtered_data
+    GROUP BY computer_name
 )
-SELECT 
+SELECT
     name,
-    count_by_name
-FROM final_result
-ORDER BY 
-    CASE 
-        WHEN name LIKE 'Other (%)' THEN 9999
-        ELSE count_by_name 
-    END DESC, name;
+    count
+FROM name_counts
+ORDER BY count DESC;
