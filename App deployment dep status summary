@@ -1,7 +1,7 @@
 WITH days_calculated AS (
     SELECT
         NOW() AS current_time,
-        NOW() - INTERVAL '90 days' AS daysago_epoch
+        NOW() - INTERVAL '90 days' AS daysago_epoch -- Calculates `daysago`
 ),
 deduped_data AS (
     SELECT DISTINCT ON (computer_name) 
@@ -10,7 +10,7 @@ deduped_data AS (
         name,
         status,
         sub_status,
-        "time"
+        "time" -- Keep the raw "time" field here for further processing
     FROM esh_main.ceh_tn_splunk_custom_deploy_sensor
 ),
 filtered_data AS (
@@ -20,10 +20,10 @@ filtered_data AS (
         d.name,
         d.status,
         d.sub_status,
-        TO_CHAR(TO_TIMESTAMP(d."time", 'YYYY-MM-DD"T"HH24:MI"Z"'), 'MM/DD/YYYY') AS deploy_time,
-        TO_TIMESTAMP(d."time", 'YYYY-MM-DD"T"HH24:MI"Z"') AS unix_timestamp
+        TO_CHAR(TO_TIMESTAMP(d."time", 'YYYY-MM-DD"T"HH24:MI"Z"'), 'MM/DD/YYYY') AS deploy_time, -- Converts "time" to formatted Deploy_Time
+        TO_TIMESTAMP(d."time", 'YYYY-MM-DD"T"HH24:MI"Z"') AS unix_timestamp -- Converts "time" to a proper timestamp for comparison
     FROM deduped_data d, days_calculated dc
-    WHERE TO_TIMESTAMP(d."time", 'YYYY-MM-DD"T"HH24:MI"Z"') >= dc.daysago_epoch
+    WHERE TO_TIMESTAMP(d."time", 'YYYY-MM-DD"T"HH24:MI"Z"') >= dc.daysago_epoch -- Compares with `daysago`
 ),
 status_counts AS (
     SELECT 
@@ -32,39 +32,28 @@ status_counts AS (
     FROM filtered_data
     GROUP BY status
 ),
-ranked_statuses AS (
+top_statuses AS (
     SELECT 
         status,
-        count,
-        ROW_NUMBER() OVER (ORDER BY count DESC) AS rank
+        count
     FROM status_counts
+    ORDER BY count DESC
+    LIMIT 7 -- Get the top 7 statuses
 ),
-top_7_and_other AS (
+other_statuses AS (
     SELECT 
-        CASE 
-            WHEN rank <= 7 THEN status
-            ELSE 'Other'
-        END AS grouped_status,
-        CASE 
-            WHEN rank <= 7 THEN count
-            ELSE 0
-        END AS individual_count,
-        rank
-    FROM ranked_statuses
-),
-final_result AS (
-    SELECT 
-        grouped_status,
-        SUM(individual_count) + 
-        CASE 
-            WHEN grouped_status = 'Other' THEN (
-                SELECT SUM(count) 
-                FROM ranked_statuses 
-                WHERE rank > 7
-            )
-            ELSE 0
-        END AS total_count
-    FROM top_7_and_other
-    GROUP BY grouped_status
+        'Other' AS status,
+        SUM(count) AS count
+    FROM status_counts
+    WHERE status NOT IN (SELECT status FROM top_statuses) -- Group all non-top 7 statuses as "Other"
 )
-SELECT * FROM final_result;
+SELECT 
+    status,
+    count
+FROM top_statuses
+UNION ALL
+SELECT 
+    status,
+    count
+FROM other_statuses
+ORDER BY count DESC; -- Combine the top 7 and "Other" group, sorted by count
