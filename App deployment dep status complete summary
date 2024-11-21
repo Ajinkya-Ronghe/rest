@@ -33,10 +33,16 @@ name_counts AS (
     FROM filtered_data
     GROUP BY name
 ),
+total_count AS (
+    SELECT 
+        SUM(count) AS total
+    FROM name_counts
+),
 top_names AS (
     SELECT 
         name,
-        count
+        count,
+        ROUND((count * 100.0) / (SELECT total FROM total_count), 2) AS percentage
     FROM name_counts
     ORDER BY count DESC
     LIMIT 7
@@ -44,18 +50,21 @@ top_names AS (
 other_names AS (
     SELECT 
         CONCAT('Other(', SUM(count), ')') AS name,
-        SUM(count) AS count
+        SUM(count) AS count,
+        ROUND((SUM(count) * 100.0) / (SELECT total FROM total_count), 2) AS percentage
     FROM name_counts
     WHERE name NOT IN (SELECT name FROM top_names)
     HAVING SUM(count) > 0
 )
 SELECT 
     name,
-    count
+    count,
+    percentage
 FROM top_names
 UNION ALL
 SELECT 
     name,
-    count
+    count,
+    percentage
 FROM other_names
 ORDER BY count DESC;
