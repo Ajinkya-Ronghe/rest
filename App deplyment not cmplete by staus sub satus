@@ -45,8 +45,8 @@ top_status_substatus AS (
 ),
 other_status_substatus AS (
     SELECT 
-        'Other(' || SUM(count) || ')' AS status, -- Label "Other" with count in parentheses
-        'Grouped Sub-Status' AS sub_status,     -- Assign a generic label for sub-status
+        'Other(' || SUM(count) || ')' AS status,
+        'Grouped Sub-Status' AS sub_status,
         SUM(count) AS count
     FROM status_substatus_counts
     WHERE (status, sub_status) NOT IN (
