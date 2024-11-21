@@ -32,9 +32,33 @@ name_counts AS (
         COUNT(*) AS count
     FROM filtered_data
     GROUP BY computer_name
+),
+ranked_names AS (
+    SELECT
+        name,
+        count,
+        ROW_NUMBER() OVER (ORDER BY count DESC) AS rank
+    FROM name_counts
+),
+top_7_and_other AS (
+    SELECT 
+        CASE 
+            WHEN rank <= 7 THEN name
+            ELSE 'Other(' || SUM(count) OVER () - SUM(CASE WHEN rank <= 7 THEN count ELSE 0 END) || ')' 
+        END AS grouped_name,
+        CASE 
+            WHEN rank <= 7 THEN count
+            ELSE NULL
+        END AS individual_count,
+        rank
+    FROM ranked_names
+),
+final_result AS (
+    SELECT 
+        grouped_name AS name,
+        COALESCE(individual_count, SUM(count) OVER (PARTITION BY grouped_name)) AS count
+    FROM top_7_and_other
 )
-SELECT
-    name,
-    count
-FROM name_counts
+SELECT DISTINCT name, count
+FROM final_result
 ORDER BY count DESC;
