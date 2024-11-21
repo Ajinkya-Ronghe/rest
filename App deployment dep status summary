@@ -1,7 +1,7 @@
 WITH days_calculated AS (
     SELECT
         NOW() AS current_time,
-        NOW() - INTERVAL '90 days' AS daysago_epoch -- Calculates `daysago`
+        NOW() - INTERVAL '90 days' AS daysago_epoch
 ),
 deduped_data AS (
     SELECT DISTINCT ON (computer_name) 
@@ -10,7 +10,7 @@ deduped_data AS (
         name,
         status,
         sub_status,
-        "time" -- Keep the raw "time" field here for further processing
+        "time"
     FROM esh_main.ceh_tn_splunk_custom_deploy_sensor
 ),
 filtered_data AS (
@@ -20,10 +20,10 @@ filtered_data AS (
         d.name,
         d.status,
         d.sub_status,
-        TO_CHAR(TO_TIMESTAMP(d."time", 'YYYY-MM-DD"T"HH24:MI"Z"'), 'MM/DD/YYYY') AS deploy_time, -- Converts "time" to formatted Deploy_Time
-        TO_TIMESTAMP(d."time", 'YYYY-MM-DD"T"HH24:MI"Z"') AS unix_timestamp -- Converts "time" to a proper timestamp for comparison
+        TO_CHAR(TO_TIMESTAMP(d."time", 'YYYY-MM-DD"T"HH24:MI"Z"'), 'MM/DD/YYYY') AS deploy_time,
+        TO_TIMESTAMP(d."time", 'YYYY-MM-DD"T"HH24:MI"Z"') AS unix_timestamp
     FROM deduped_data d, days_calculated dc
-    WHERE TO_TIMESTAMP(d."time", 'YYYY-MM-DD"T"HH24:MI"Z"') >= dc.daysago_epoch -- Compares with `daysago`
+    WHERE TO_TIMESTAMP(d."time", 'YYYY-MM-DD"T"HH24:MI"Z"') >= dc.daysago_epoch
 ),
 status_counts AS (
     SELECT 
@@ -38,14 +38,15 @@ top_statuses AS (
         count
     FROM status_counts
     ORDER BY count DESC
-    LIMIT 7 -- Get the top 7 statuses
+    LIMIT 7
 ),
 other_statuses AS (
     SELECT 
-        'Other' AS status,
+        CONCAT('Other(', SUM(count), ')') AS status,
         SUM(count) AS count
     FROM status_counts
-    WHERE status NOT IN (SELECT status FROM top_statuses) -- Group all non-top 7 statuses as "Other"
+    WHERE status NOT IN (SELECT status FROM top_statuses)
+    HAVING SUM(count) > 0
 )
 SELECT 
     status,
@@ -56,4 +57,4 @@ SELECT
     status,
     count
 FROM other_statuses
-ORDER BY count DESC; -- Combine the top 7 and "Other" group, sorted by count
+ORDER BY count DESC;
