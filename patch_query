@@ -1,59 +1,62 @@
-WITH patch_data AS (
-    SELECT 
-        arp.ci_item_computer_name AS computer_name,
-        arp.ci_item_custom_tag_custom_tag AS custom_tags,
-        arp.ci_item_operating_system AS operating_system,
-        pisas.patch_installation_state_title AS title,
-        pisas.patch_installation_state_status AS install_status,
-        pisas.patch_installation_state_severity AS severity,
-        pisas.patch_installation_state_release_date AS release_date,
-        pisas.patch_installation_state_kb_articles AS kb_articles,
-        pisas.patch_installation_state_product AS product,
-        pisas.patch_installation_state_installation_character AS classification,
-        arp.ci_item_uptime AS uptime,
-        pisas.created_time AS last_seen,
-        NOW() AS timenow,
-        NOW() - INTERVAL '30 days' AS days_ago
-    FROM 
-        esh_main.ceh_tn_asset_report_fs_hardware_inventory_report arp
-    JOIN 
-        esh_main.ceh_tn_patch_installation_state_all_status pisas
-    ON 
-        arp.ci_item_computer_name = pisas.computer_name
-    WHERE 
-        pisas.patch_installation_state_status = 'Not Installed'
+WITH asset_data AS (
+    SELECT
+        ci_item_computer_name AS computer_name,
+        ci_item_operating_system AS operating_system,
+        ci_item_last_seen AS last_seen
+    FROM esh_main.ceh_tn_asset_report_fs_hardware_inventory_report
 ),
-filtered_data AS (
-    SELECT 
-        *,
-        EXTRACT(EPOCH FROM last_seen) AS unix_last_seen,
-        EXTRACT(EPOCH FROM last_seen) - (5 * 3600) AS utc_last_seen,
-        AGE(timenow, last_seen) AS data_age_epoch,
-        TO_TIMESTAMP(EXTRACT(EPOCH FROM release_date)) AS epoch_release_date
-    FROM 
-        patch_data
-    WHERE 
-        TO_TIMESTAMP(EXTRACT(EPOCH FROM release_date)) <= days_ago
-        AND AGE(timenow, last_seen) < INTERVAL '30 hours'
-),
-deduplicated_data AS (
-    SELECT DISTINCT ON (computer_name, title)
+patch_data AS (
+    SELECT
+        id,
         computer_name,
         custom_tags,
         operating_system,
-        title,
-        install_status,
-        severity,
-        release_date,
-        kb_articles,
-        product,
-        classification,
-        uptime,
-        TO_CHAR(utc_last_seen, 'MM/DD/YYYY HH24:MI:SS') AS last_seen_formatted
-    FROM 
-        filtered_data
+        patch_installation_state_title AS title,
+        patch_installation_state_install_status AS install_status,
+        patch_installation_state_severity AS severity,
+        patch_installation_state_release_date AS release_date,
+        patch_installation_state_kb_articles AS kb_articles,
+        patch_installation_state_product AS product,
+        patch_installation_state_classification AS classification,
+        patch_installation_state_size_in_bytes AS size_in_bytes,
+        patch_installation_state_cve_ids AS cve_ids
+    FROM esh_main.ceh_tn_patch_installation_state_all_status
+    WHERE patch_installation_state_install_status = 'Not Installed'
+),
+combined_data AS (
+    SELECT
+        a.computer_name,
+        p.custom_tags,
+        a.operating_system,
+        p.title,
+        p.install_status,
+        p.severity,
+        p.release_date,
+        p.kb_articles,
+        p.product,
+        p.classification,
+        a.last_seen,
+        p.size_in_bytes,
+        p.cve_ids,
+        NOW() AS timenow
+    FROM asset_data a
+    INNER JOIN patch_data p ON a.computer_name = p.computer_name
+),
+filtered_data AS (
+    SELECT
+        *,
+        NOW() - INTERVAL '30 days' AS days_ago,
+        EXTRACT(EPOCH FROM NOW()) - EXTRACT(EPOCH FROM a.last_seen::timestamp) AS data_age,
+        CASE
+            WHEN a.last_seen IS NOT NULL THEN EXTRACT(EPOCH FROM a.last_seen::timestamp) - (5 * 3600)
+            ELSE NULL
+        END AS utc_last_seen
+    FROM combined_data
+    WHERE p.title IS NOT NULL
+      AND p.release_date::timestamp <= NOW() - INTERVAL '30 days'
+      AND EXTRACT(EPOCH FROM NOW()) - EXTRACT(EPOCH FROM a.last_seen::timestamp) < 108000
 )
-SELECT 
+SELECT DISTINCT
     computer_name,
     custom_tags,
     operating_system,
@@ -64,9 +67,6 @@ SELECT
     kb_articles,
     product,
     classification,
-    uptime,
-    last_seen_formatted AS last_seen
-FROM 
-    deduplicated_data
-ORDER BY 
-    computer_name;
+    EXTRACT(EPOCH FROM utc_last_seen) AS last_seen
+FROM filtered_data
+ORDER BY computer_name;
