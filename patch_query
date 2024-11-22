@@ -35,7 +35,10 @@ combined_data AS (
         patch_data.kb_articles,
         patch_data.product,
         patch_data.classification,
-        asset_data.last_seen,
+        CASE 
+            WHEN asset_data.last_seen = 'Not Available' THEN NULL
+            ELSE asset_data.last_seen
+        END AS valid_last_seen,
         patch_data.size_in_bytes,
         patch_data.cve_ids,
         NOW() AS timenow
@@ -46,15 +49,18 @@ filtered_data AS (
     SELECT
         *,
         NOW() - INTERVAL '30 days' AS days_ago,
-        EXTRACT(EPOCH FROM NOW()) - EXTRACT(EPOCH FROM last_seen::timestamp) AS data_age,
+        CASE 
+            WHEN valid_last_seen IS NOT NULL THEN EXTRACT(EPOCH FROM NOW()) - EXTRACT(EPOCH FROM valid_last_seen::timestamp)
+            ELSE NULL
+        END AS data_age,
         CASE
-            WHEN last_seen IS NOT NULL THEN EXTRACT(EPOCH FROM last_seen::timestamp) - (5 * 3600)
+            WHEN valid_last_seen IS NOT NULL THEN EXTRACT(EPOCH FROM valid_last_seen::timestamp) - (5 * 3600)
             ELSE NULL
         END AS utc_last_seen
     FROM combined_data
     WHERE title IS NOT NULL
       AND release_date::timestamp <= NOW() - INTERVAL '30 days'
-      AND EXTRACT(EPOCH FROM NOW()) - EXTRACT(EPOCH FROM last_seen::timestamp) < 108000
+      AND (valid_last_seen IS NULL OR EXTRACT(EPOCH FROM NOW()) - EXTRACT(EPOCH FROM valid_last_seen::timestamp) < 108000)
 )
 SELECT DISTINCT
     computer_name,
@@ -67,6 +73,9 @@ SELECT DISTINCT
     kb_articles,
     product,
     classification,
-    TO_TIMESTAMP(utc_last_seen) AT TIME ZONE 'UTC' AS last_seen
+    CASE
+        WHEN utc_last_seen IS NOT NULL THEN TO_TIMESTAMP(utc_last_seen) AT TIME ZONE 'UTC'
+        ELSE NULL
+    END AS last_seen
 FROM filtered_data
 ORDER BY computer_name;
