@@ -1,0 +1,72 @@
+WITH patch_data AS (
+    SELECT 
+        arp.ci_item_computer_name AS computer_name,
+        arp.ci_item_custom_tag_custom_tag AS custom_tags,
+        arp.ci_item_operating_system AS operating_system,
+        pisas.patch_installation_state_title AS title,
+        pisas.patch_installation_state_status AS install_status,
+        pisas.patch_installation_state_severity AS severity,
+        pisas.patch_installation_state_release_date AS release_date,
+        pisas.patch_installation_state_kb_articles AS kb_articles,
+        pisas.patch_installation_state_product AS product,
+        pisas.patch_installation_state_installation_character AS classification,
+        arp.ci_item_uptime AS uptime,
+        pisas.created_time AS last_seen,
+        NOW() AS timenow,
+        NOW() - INTERVAL '30 days' AS days_ago
+    FROM 
+        esh_main.ceh_tn_asset_report_fs_hardware_inventory_report arp
+    JOIN 
+        esh_main.ceh_tn_patch_installation_state_all_status pisas
+    ON 
+        arp.ci_item_computer_name = pisas.computer_name
+    WHERE 
+        pisas.patch_installation_state_status = 'Not Installed'
+),
+filtered_data AS (
+    SELECT 
+        *,
+        EXTRACT(EPOCH FROM last_seen) AS unix_last_seen,
+        EXTRACT(EPOCH FROM last_seen) - (5 * 3600) AS utc_last_seen,
+        AGE(timenow, last_seen) AS data_age_epoch,
+        TO_TIMESTAMP(EXTRACT(EPOCH FROM release_date)) AS epoch_release_date
+    FROM 
+        patch_data
+    WHERE 
+        TO_TIMESTAMP(EXTRACT(EPOCH FROM release_date)) <= days_ago
+        AND AGE(timenow, last_seen) < INTERVAL '30 hours'
+),
+deduplicated_data AS (
+    SELECT DISTINCT ON (computer_name, title)
+        computer_name,
+        custom_tags,
+        operating_system,
+        title,
+        install_status,
+        severity,
+        release_date,
+        kb_articles,
+        product,
+        classification,
+        uptime,
+        TO_CHAR(utc_last_seen, 'MM/DD/YYYY HH24:MI:SS') AS last_seen_formatted
+    FROM 
+        filtered_data
+)
+SELECT 
+    computer_name,
+    custom_tags,
+    operating_system,
+    title,
+    install_status,
+    severity,
+    release_date,
+    kb_articles,
+    product,
+    classification,
+    uptime,
+    last_seen_formatted AS last_seen
+FROM 
+    deduplicated_data
+ORDER BY 
+    computer_name;
