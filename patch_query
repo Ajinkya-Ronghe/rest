@@ -23,7 +23,7 @@ joined_data AS (
         esh_main.ceh_tn_asset_report_fs_hardware_inventory_report AS ar
     JOIN
         esh_main.ceh_tn_patch_installation_state_all_status AS pi
-        ON lower(ar.ci_item_computer_name) = lower(pi.computer_name)
+            ON lower(ar.ci_item_computer_name) = lower(pi.computer_name)
     WHERE
         pi.patch_installation_state_install_status = 'Not Installed'
 ),
@@ -35,9 +35,21 @@ calculations AS (
         extract(epoch FROM jd.ar_created_time) AS ar_created_time_epoch,
         ((SELECT timenow FROM timenow) - 2592000) AS days_ago,
         ((SELECT timenow FROM timenow) - extract(epoch FROM jd.pi_created_time)) AS data_age,
-        to_timestamp(jd.release_date, 'MM/DD/YYYY') AS release_date_timestamp,
-        extract(epoch FROM to_timestamp(jd.release_date, 'MM/DD/YYYY')) AS epoch_release_date,
-        to_timestamp(jd.ci_item_last_seen_at, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AT TIME ZONE 'UTC' AS last_seen_timestamp,
+        CASE
+            WHEN jd.release_date ~ '^\d{1,2}/\d{1,2}/\d{4}$'
+            THEN to_timestamp(jd.release_date, 'MM/DD/YYYY')
+            ELSE NULL
+        END AS release_date_timestamp,
+        CASE
+            WHEN jd.release_date ~ '^\d{1,2}/\d{1,2}/\d{4}$'
+            THEN extract(epoch FROM to_timestamp(jd.release_date, 'MM/DD/YYYY'))
+            ELSE NULL
+        END AS epoch_release_date,
+        CASE
+            WHEN jd.ci_item_last_seen_at ~ '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d+Z$'
+            THEN to_timestamp(jd.ci_item_last_seen_at, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AT TIME ZONE 'UTC'
+            ELSE NULL
+        END AS last_seen_timestamp,
         ROW_NUMBER() OVER (
             PARTITION BY lower(jd.computer_name), jd.title
             ORDER BY jd.pi_created_time DESC
@@ -63,6 +75,7 @@ FROM
 WHERE
     title IS NOT NULL
     AND title <> ''
+    AND epoch_release_date IS NOT NULL
     AND epoch_release_date <= days_ago
     AND data_age < 108000
     AND rn = 1
