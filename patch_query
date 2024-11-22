@@ -1,69 +1,51 @@
-WITH asset_data AS (
-    SELECT
-        ci_item_computer_name AS computer_name,
-        ci_item_operating_system AS operating_system,
-        CASE
-            WHEN ci_item_last_seen_at = 'Not Available' THEN NULL
-            ELSE ci_item_last_seen_at
-        END AS last_seen
-    FROM esh_main.ceh_tn_asset_report_fs_hardware_inventory_report
-    WHERE ci_item_last_seen_at IS DISTINCT FROM 'Not Available'
+WITH timenow AS (
+    SELECT extract(epoch FROM now()) AS timenow
 ),
-patch_data AS (
+joined_data AS (
     SELECT
-        id,
-        computer_name,
-        custom_tags,
-        operating_system,
-        patch_installation_state_title AS title,
-        patch_installation_state_install_status AS install_status,
-        patch_installation_state_severity AS severity,
-        patch_installation_state_release_date AS release_date,
-        patch_installation_state_kb_articles AS kb_articles,
-        patch_installation_state_product AS product,
-        patch_installation_state_classification AS classification,
-        patch_installation_state_size_in_bytes AS size_in_bytes,
-        patch_installation_state_cve_ids AS cve_ids
-    FROM esh_main.ceh_tn_patch_installation_state_all_status
-    WHERE patch_installation_state_install_status = 'Not Installed'
+        lower(ar.ci_item_computer_name) AS computer_name,
+        ar.ci_custom_tag_custom_tag AS custom_tags,
+        ar.ci_item_operating_system AS operating_system,
+        pi.patch_installation_state_title AS title,
+        pi.patch_installation_state_install_status AS install_status,
+        pi.patch_installation_state_severity AS severity,
+        pi.patch_installation_state_release_date AS release_date,
+        pi.patch_installation_state_kb_articles AS kb_articles,
+        pi.patch_installation_state_product AS product,
+        pi.patch_installation_state_classification AS classification,
+        ar.ci_item_uptime AS uptime,
+        ar.ci_item_last_seen_at AS ci_item_last_seen_at,
+        pi.created_time AS pi_created_time,
+        ar.created_time AS ar_created_time,
+        pi.id AS pi_id,
+        ar.id AS ar_id
+    FROM
+        esh_main.ceh_tn_asset_report_fs_hardware_inventory_report AS ar
+    JOIN
+        esh_main.ceh_tn_patch_installation_state_all_status AS pi
+        ON lower(ar.ci_item_computer_name) = lower(pi.computer_name)
+    WHERE
+        pi.patch_installation_state_install_status = 'Not Installed'
 ),
-combined_data AS (
+calculations AS (
     SELECT
-        a.computer_name,
-        p.custom_tags,
-        a.operating_system,
-        p.title,
-        p.install_status,
-        p.severity,
-        p.release_date,
-        p.kb_articles,
-        p.product,
-        p.classification,
-        a.last_seen,
-        p.size_in_bytes,
-        p.cve_ids,
-        NOW() AS timenow
-    FROM asset_data a
-    INNER JOIN patch_data p ON a.computer_name = p.computer_name
-),
-filtered_data AS (
-    SELECT
-        *,
-        NOW() - INTERVAL '30 days' AS days_ago,
-        CASE
-            WHEN last_seen IS NOT NULL THEN EXTRACT(EPOCH FROM NOW()) - EXTRACT(EPOCH FROM last_seen::timestamp)
-            ELSE NULL
-        END AS data_age,
-        CASE
-            WHEN last_seen IS NOT NULL THEN EXTRACT(EPOCH FROM last_seen::timestamp) - (5 * 3600)
-            ELSE NULL
-        END AS utc_last_seen
-    FROM combined_data
-    WHERE title IS NOT NULL
-      AND release_date::timestamp <= NOW() - INTERVAL '30 days'
-      AND (last_seen IS NULL OR EXTRACT(EPOCH FROM NOW()) - EXTRACT(EPOCH FROM last_seen::timestamp) < 108000)
+        jd.*,
+        (SELECT timenow FROM timenow) AS timenow,
+        extract(epoch FROM jd.pi_created_time) AS pi_created_time_epoch,
+        extract(epoch FROM jd.ar_created_time) AS ar_created_time_epoch,
+        ((SELECT timenow FROM timenow) - 2592000) AS days_ago,
+        ((SELECT timenow FROM timenow) - extract(epoch FROM jd.pi_created_time)) AS data_age,
+        to_timestamp(jd.release_date, 'MM/DD/YYYY') AS release_date_timestamp,
+        extract(epoch FROM to_timestamp(jd.release_date, 'MM/DD/YYYY')) AS epoch_release_date,
+        to_timestamp(jd.ci_item_last_seen_at, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AT TIME ZONE 'UTC' AS last_seen_timestamp,
+        ROW_NUMBER() OVER (
+            PARTITION BY lower(jd.computer_name), jd.title
+            ORDER BY jd.pi_created_time DESC
+        ) AS rn
+    FROM
+        joined_data jd
 )
-SELECT DISTINCT
+SELECT
     computer_name,
     custom_tags,
     operating_system,
@@ -74,9 +56,15 @@ SELECT DISTINCT
     kb_articles,
     product,
     classification,
-    CASE
-        WHEN utc_last_seen IS NOT NULL THEN TO_TIMESTAMP(utc_last_seen) AT TIME ZONE 'UTC'
-        ELSE NULL
-    END AS last_seen
-FROM filtered_data
-ORDER BY computer_name;
+    uptime,
+    to_char(last_seen_timestamp - interval '5 hours', 'MM-DD-YYYY HH24:MI:SS') AS last_seen
+FROM
+    calculations
+WHERE
+    title IS NOT NULL
+    AND title <> ''
+    AND epoch_release_date <= days_ago
+    AND data_age < 108000
+    AND rn = 1
+ORDER BY
+    computer_name;
