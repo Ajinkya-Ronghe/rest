@@ -2,7 +2,7 @@ WITH asset_data AS (
     SELECT
         ci_item_computer_name AS computer_name,
         ci_item_operating_system AS operating_system,
-        ci_item_last_seen AS last_seen
+        ci_item_last_seen_at AS last_seen
     FROM esh_main.ceh_tn_asset_report_fs_hardware_inventory_report
 ),
 patch_data AS (
@@ -25,36 +25,36 @@ patch_data AS (
 ),
 combined_data AS (
     SELECT
-        a.computer_name,
-        p.custom_tags,
-        a.operating_system,
-        p.title,
-        p.install_status,
-        p.severity,
-        p.release_date,
-        p.kb_articles,
-        p.product,
-        p.classification,
-        a.last_seen,
-        p.size_in_bytes,
-        p.cve_ids,
+        asset_data.computer_name,
+        patch_data.custom_tags,
+        asset_data.operating_system,
+        patch_data.title,
+        patch_data.install_status,
+        patch_data.severity,
+        patch_data.release_date,
+        patch_data.kb_articles,
+        patch_data.product,
+        patch_data.classification,
+        asset_data.last_seen,
+        patch_data.size_in_bytes,
+        patch_data.cve_ids,
         NOW() AS timenow
-    FROM asset_data a
-    INNER JOIN patch_data p ON a.computer_name = p.computer_name
+    FROM asset_data
+    INNER JOIN patch_data ON asset_data.computer_name = patch_data.computer_name
 ),
 filtered_data AS (
     SELECT
         *,
         NOW() - INTERVAL '30 days' AS days_ago,
-        EXTRACT(EPOCH FROM NOW()) - EXTRACT(EPOCH FROM a.last_seen::timestamp) AS data_age,
+        EXTRACT(EPOCH FROM NOW()) - EXTRACT(EPOCH FROM last_seen::timestamp) AS data_age,
         CASE
-            WHEN a.last_seen IS NOT NULL THEN EXTRACT(EPOCH FROM a.last_seen::timestamp) - (5 * 3600)
+            WHEN last_seen IS NOT NULL THEN EXTRACT(EPOCH FROM last_seen::timestamp) - (5 * 3600)
             ELSE NULL
         END AS utc_last_seen
     FROM combined_data
-    WHERE p.title IS NOT NULL
-      AND p.release_date::timestamp <= NOW() - INTERVAL '30 days'
-      AND EXTRACT(EPOCH FROM NOW()) - EXTRACT(EPOCH FROM a.last_seen::timestamp) < 108000
+    WHERE title IS NOT NULL
+      AND release_date::timestamp <= NOW() - INTERVAL '30 days'
+      AND EXTRACT(EPOCH FROM NOW()) - EXTRACT(EPOCH FROM last_seen::timestamp) < 108000
 )
 SELECT DISTINCT
     computer_name,
@@ -67,6 +67,6 @@ SELECT DISTINCT
     kb_articles,
     product,
     classification,
-    EXTRACT(EPOCH FROM utc_last_seen) AS last_seen
+    TO_TIMESTAMP(utc_last_seen) AT TIME ZONE 'UTC' AS last_seen
 FROM filtered_data
 ORDER BY computer_name;
