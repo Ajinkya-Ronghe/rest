@@ -1,0 +1,66 @@
+WITH timenow AS (
+    SELECT EXTRACT(EPOCH FROM NOW()) AS timenow
+),
+data AS (
+    SELECT
+        ps.computer_name AS "Computer_Name",
+        ps.custom_tags AS "Custom_Tags",
+        ps.operating_system AS "Operating_System",
+        ps.patch_installation_state_title AS "Title",
+        ps.patch_installation_state_install_status AS "Install_Status",
+        ps.patch_installation_state_severity AS "Severity",
+        ps.patch_installation_state_release_date AS "Release_Date",
+        ps.patch_installation_state_kb_articles AS "KB_Articles",
+        ps.patch_installation_state_product AS "Product_Classification",
+        ps.uptime AS "Uptime",
+        ps.created_time AS "Created_Time",
+        EXTRACT(EPOCH FROM ps.created_time) AS event_time_epoch
+    FROM
+        esh_main.ceh_tn_patch_installation_state_all_status ps
+    WHERE
+        ps.patch_installation_state_install_status = 'Not Installed'
+),
+calculations AS (
+    SELECT
+        data.*,
+        t.timenow,
+        (t.timenow - 2592000) AS past_days,      -- 30 days in seconds
+        (t.timenow - data.event_time_epoch) AS data_age,
+        TO_CHAR(data.created_time, 'MM-DD-YYYY"T"HH24:MI:SS.MS"Z"') AS "Reported_On",
+        CASE
+            WHEN data."Release_Date" ~ '^\d{1,2}/\d{1,2}/\d{4}$'
+            THEN EXTRACT(EPOCH FROM TO_TIMESTAMP(data."Release_Date", 'MM/DD/YYYY'))
+            ELSE NULL
+        END AS epoch_release_date,
+        ROW_NUMBER() OVER (
+            PARTITION BY LOWER(data."Computer_Name"), data."Title"
+            ORDER BY data.created_time DESC
+        ) AS rn
+    FROM
+        data
+    CROSS JOIN
+        timenow t
+)
+SELECT
+    "Computer_Name",
+    "Custom_Tags",
+    "Operating_System",
+    "Title",
+    "Install_Status",
+    "Severity",
+    "Release_Date",
+    "KB_Articles",
+    "Product_Classification",
+    "Uptime",
+    "Reported_On"
+FROM
+    calculations
+WHERE
+    epoch_release_date IS NOT NULL
+    AND epoch_release_date >= past_days
+    AND data_age < 108000        -- 30 hours in seconds
+    AND "Title" IS NOT NULL
+    AND "Title" <> ''
+    AND rn = 1
+ORDER BY
+    "Computer_Name";
