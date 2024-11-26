@@ -1,17 +1,36 @@
-SELECT DISTINCT ON (LOWER(computer_name), patch_installation_state_title)
-    computer_name AS "Computer_Name",
-    operating_system AS "Operating_System",
-    patch_installation_state_title AS "Title",
-    patch_installation_state_install_status AS "Install_Status",
-    patch_installation_state_severity AS "Severity",
-    patch_installation_state_release_date AS "Release_Date",
-    patch_installation_state_kb_articles AS "KB_Articles",
-    patch_installation_state_product || ' ' || patch_installation_state_classification AS "Product_Classification"
+WITH ranked_data AS (
+    SELECT 
+        computer_name AS Computer_Name, 
+        operating_system AS Operating_System, 
+        patch_installation_state_title AS Title, 
+        patch_installation_state_install_status AS Install_Status, 
+        patch_installation_state_severity AS Severity, 
+        patch_installation_state_release_date AS Release_Date, 
+        patch_installation_state_kb_articles AS KB_Articles, 
+        patch_installation_state_product AS Product,
+        patch_installation_state_classification AS Classification,
+        ROW_NUMBER() OVER (
+            PARTITION BY computer_name, patch_installation_state_title 
+            ORDER BY created_time DESC
+        ) AS rn
+    FROM
+        esh_main.ceh_tn_patch_installation_state_all_status
+    WHERE
+        patch_installation_state_install_status IN ('Installed', 'Installed Pending Restart')
+)
+SELECT
+    Computer_Name, 
+    Operating_System, 
+    Title, 
+    Install_Status, 
+    Severity, 
+    Release_Date, 
+    KB_Articles, 
+    Product, 
+    Classification
 FROM
-    esh_main.ceh_tn_patch_installation_state_all_status
+    ranked_data
 WHERE
-    patch_installation_state_install_status IN ('Installed', 'Installed Pending Restart')
+    rn = 1
 ORDER BY
-    LOWER(computer_name),
-    patch_installation_state_title,
-    created_time DESC;
+    Computer_Name;
