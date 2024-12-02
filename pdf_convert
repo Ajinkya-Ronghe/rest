@@ -1,13 +1,21 @@
 convertToPDF(data: any[]): Blob {
-  // Generate PDF content using jsPDF
+  // Create a new jsPDF instance
   const pdf = new jsPDF();
-  pdf.text('Exported Data', 10, 10); // Title
-  let yOffset = 20;
 
-  // Loop through the data and add each row to the PDF
-  data.forEach((row: any) => {
-    pdf.text(JSON.stringify(row), 10, yOffset);
-    yOffset += 10;
+  // Extract column headers (keys from the first object)
+  const headers = [Object.keys(data[0])];
+
+  // Extract row data (values from each object)
+  const rows = data.map(row => Object.values(row));
+
+  // Add a title
+  pdf.text('Exported Data', 10, 10);
+
+  // Generate the table using autoTable
+  (pdf as any).autoTable({
+    head: headers,
+    body: rows,
+    startY: 20, // Start position after title
   });
 
   // Return the PDF content as a Blob
