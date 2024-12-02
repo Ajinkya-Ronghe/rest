@@ -1,0 +1,15 @@
+convertToPDF(data: any[]): Blob {
+  // Generate PDF content using jsPDF
+  const pdf = new jsPDF();
+  pdf.text('Exported Data', 10, 10); // Title
+  let yOffset = 20;
+
+  // Loop through the data and add each row to the PDF
+  data.forEach((row: any) => {
+    pdf.text(JSON.stringify(row), 10, yOffset);
+    yOffset += 10;
+  });
+
+  // Return the PDF content as a Blob
+  return pdf.output('blob');
+}
