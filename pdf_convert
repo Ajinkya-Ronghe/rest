@@ -1,12 +1,61 @@
+Step 1: Convert JSON to HTML Table
+Create a utility function to generate an HTML table from JSON data. This function will dynamically create the table based on the keys and values in the JSON object.
+
+Utility Function: JSON to HTML Table
+typescript
+Copy code
+generateHTMLTable(data: any[]): string {
+  if (!data || data.length === 0) {
+    return '<p>No data available</p>';
+  }
+
+  // Generate table headers
+  const headers = Object.keys(data[0]);
+  let table = '<table border="1" style="width: 100%; border-collapse: collapse; text-align: left;">';
+  table += '<thead><tr>';
+  headers.forEach(header => {
+    table += `<th style="padding: 5px; background-color: #f2f2f2;">${header}</th>`;
+  });
+  table += '</tr></thead>';
+
+  // Generate table rows
+  table += '<tbody>';
+  data.forEach(row => {
+    table += '<tr>';
+    headers.forEach(header => {
+      table += `<td style="padding: 5px;">${row[header] || ''}</td>`;
+    });
+    table += '</tr>';
+  });
+  table += '</tbody></table>';
+
+  return table;
+}
+Step 2: Insert Table into a Hidden Div
+In your Angular template, include a hidden div to render the HTML table. This div will hold the dynamically generated table:
+
+Angular Template
+html
+Copy code
+<div id="pdfTable" style="display: none;"></div>
+Step 3: Generate Table and Convert to PDF
+Use the generateHTMLTable function to populate the pdfTable div and then convert it to PDF using html2pdf.js.
+
+Updated convertToPDF Function
+typescript
+Copy code
 import * as html2pdf from 'html2pdf.js';
 
-convertToPDF(): Promise<Blob> {
-  const element = document.getElementById('pdfTable'); // The HTML element ID for the table
+convertToPDF(jsonData: any[]): Promise<Blob> {
+  const element = document.getElementById('pdfTable');
 
   if (!element) {
     console.error('Element with ID "pdfTable" not found');
     return Promise.reject('HTML element not found');
   }
+
+  // Generate the HTML table and insert it into the div
+  element.innerHTML = this.generateHTMLTable(jsonData);
 
   const options = {
     margin: 10,
@@ -14,7 +63,7 @@ convertToPDF(): Promise<Blob> {
     jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
   };
 
-  // Return a Promise that resolves to a Blob
+  // Convert the HTML table to a PDF and return a Blob
   return new Promise((resolve, reject) => {
     html2pdf()
       .from(element)
@@ -23,4 +72,39 @@ convertToPDF(): Promise<Blob> {
       .then((blob: Blob) => resolve(blob))
       .catch((error: any) => reject(error));
   });
+}
+Step 4: Integrate with downloadData
+Update the downloadData method to convert the JSON to a PDF:
+
+typescript
+Copy code
+downloadData(format: string): void {
+  const data = this.data.dataSource; // Assuming dataSource contains your JSON array
+  let content: Blob;
+
+  if (format === 'pdf') {
+    this.convertToPDF(data)
+      .then((pdfContent: Blob) => {
+        this.downloadFile(pdfContent, 'data.pdf', 'application/pdf');
+      })
+      .catch(error => {
+        console.error('Error generating PDF:', error);
+      });
+  }
+
+  this.dialogRef.close();
+}
+Step 5: Download Utility Function
+Ensure the downloadFile function is included:
+
+typescript
+Copy code
+downloadFile(content: Blob, fileName: string, fileType: string): void {
+  const blob = new Blob([content], { type: fileType });
+  const url = window.URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = fileName;
+  anchor.click();
+  window.URL.revokeObjectURL(url); // Clean up
 }
