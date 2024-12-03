@@ -1,28 +1,26 @@
 import * as html2pdf from 'html2pdf.js';
 
-convertToPDF(): void {
-  // Get the HTML element containing the table
-  const element = document.getElementById('pdfTable'); // Replace with the ID of your HTML table
+convertToPDF(): Promise<Blob> {
+  const element = document.getElementById('pdfTable'); // The HTML element ID for the table
 
   if (!element) {
     console.error('Element with ID "pdfTable" not found');
-    return;
+    return Promise.reject('HTML element not found');
   }
 
-  // Define options for the PDF generation
   const options = {
     margin: 10,
-    filename: 'ExportedData.pdf',
-    html2canvas: {
-      scale: 2, // Higher scale for better resolution
-    },
-    jsPDF: {
-      unit: 'mm',
-      format: 'a4',
-      orientation: 'portrait',
-    },
+    html2canvas: { scale: 2 }, // High resolution
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
   };
 
-  // Generate and download the PDF
-  html2pdf().from(element).set(options).save();
+  // Return a Promise that resolves to a Blob
+  return new Promise((resolve, reject) => {
+    html2pdf()
+      .from(element)
+      .set(options)
+      .outputPdf('blob') // Generate as Blob
+      .then((blob: Blob) => resolve(blob))
+      .catch((error: any) => reject(error));
+  });
 }
