@@ -1,75 +1,28 @@
-convertToPDF(data: any[]): Blob {
-  const pdf = new jsPDF();
-  const pageWidth = pdf.internal.pageSize.getWidth();
-  const pageHeight = pdf.internal.pageSize.getHeight();
-  const margin = 10;
-  const cellPadding = 3;
-  const lineHeight = 6; // Height of a single line of text
-  const maxHeight = pageHeight - margin * 2; // Maximum height to avoid overflow
-  const headerHeight = 10; // Height for the header row
-  const columnSpacing = 5; // Space between columns
+import * as html2pdf from 'html2pdf.js';
 
-  // Extract headers
-  const headers = Object.keys(data[0]);
+convertToPDF(): void {
+  // Get the HTML element containing the table
+  const element = document.getElementById('pdfTable'); // Replace with the ID of your HTML table
 
-  // Calculate column widths proportionally
-  const totalColumns = headers.length;
-  const columnWidth = (pageWidth - margin * 2 - (totalColumns - 1) * columnSpacing) / totalColumns;
+  if (!element) {
+    console.error('Element with ID "pdfTable" not found');
+    return;
+  }
 
-  // Add Title
-  pdf.text('Exported Data', margin, margin);
+  // Define options for the PDF generation
+  const options = {
+    margin: 10,
+    filename: 'ExportedData.pdf',
+    html2canvas: {
+      scale: 2, // Higher scale for better resolution
+    },
+    jsPDF: {
+      unit: 'mm',
+      format: 'a4',
+      orientation: 'portrait',
+    },
+  };
 
-  // Starting Y position
-  let currentY = margin + 10;
-
-  // Draw headers
-  pdf.setFont('Helvetica', 'bold');
-  headers.forEach((header, index) => {
-    const x = margin + index * (columnWidth + columnSpacing);
-    pdf.text(header, x + cellPadding, currentY);
-  });
-
-  // Move to first data row
-  currentY += headerHeight;
-
-  // Draw rows
-  pdf.setFont('Helvetica', 'normal');
-  data.forEach((row, rowIndex) => {
-    // Check if the current row exceeds the page height
-    if (currentY + headerHeight > maxHeight) {
-      pdf.addPage();
-      currentY = margin; // Reset to the top of the new page
-
-      // Redraw headers on the new page
-      pdf.setFont('Helvetica', 'bold');
-      headers.forEach((header, index) => {
-        const x = margin + index * (columnWidth + columnSpacing);
-        pdf.text(header, x + cellPadding, currentY);
-      });
-      currentY += headerHeight;
-      pdf.setFont('Helvetica', 'normal');
-    }
-
-    // Draw each cell in the row
-    headers.forEach((header, index) => {
-      const x = margin + index * (columnWidth + columnSpacing);
-      const cellText = row[header] !== undefined ? String(row[header]) : '';
-      const wrappedText = pdf.splitTextToSize(cellText, columnWidth - cellPadding * 2);
-
-      // Add wrapped text line by line
-      wrappedText.forEach((line, lineIndex) => {
-        pdf.text(line, x + cellPadding, currentY + lineHeight * lineIndex);
-      });
-
-      // Adjust Y for the tallest cell in the row
-      const cellHeight = wrappedText.length * lineHeight;
-      currentY = Math.max(currentY, currentY + cellHeight);
-    });
-
-    // Add spacing for next row
-    currentY += cellPadding;
-  });
-
-  // Return PDF as Blob
-  return pdf.output('blob');
+  // Generate and download the PDF
+  html2pdf().from(element).set(options).save();
 }
