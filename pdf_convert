@@ -1,23 +1,39 @@
 convertToPDF(data: any[]): Blob {
-  // Create a new jsPDF instance
   const pdf = new jsPDF();
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const margin = 10;
+  const cellPadding = 2;
+  const cellHeight = 10;
 
   // Extract column headers (keys from the first object)
-  const headers = [Object.keys(data[0])];
+  const headers = Object.keys(data[0]);
 
-  // Extract row data (values from each object)
-  const rows = data.map(row => Object.values(row));
+  // Add title
+  pdf.text('Exported Data', margin, margin);
 
-  // Add a title
-  pdf.text('Exported Data', 10, 10);
+  // Calculate column width (divide equally for simplicity)
+  const columnWidth = (pageWidth - 2 * margin) / headers.length;
 
-  // Generate the table using autoTable
-  (pdf as any).autoTable({
-    head: headers,
-    body: rows,
-    startY: 20, // Start position after title
+  // Draw header row
+  let currentY = margin + 10; // Start below the title
+  headers.forEach((header, index) => {
+    const xPos = margin + index * columnWidth;
+    pdf.rect(xPos, currentY, columnWidth, cellHeight); // Draw cell
+    pdf.text(header, xPos + cellPadding, currentY + cellHeight / 2 + 2); // Add header text
   });
 
-  // Return the PDF content as a Blob
+  // Draw rows
+  currentY += cellHeight; // Move to the next row
+  data.forEach((row) => {
+    headers.forEach((header, index) => {
+      const xPos = margin + index * columnWidth;
+      pdf.rect(xPos, currentY, columnWidth, cellHeight); // Draw cell
+      const cellText = row[header] !== undefined ? String(row[header]) : '';
+      pdf.text(cellText, xPos + cellPadding, currentY + cellHeight / 2 + 2); // Add cell text
+    });
+    currentY += cellHeight; // Move to the next row
+  });
+
+  // Return the PDF as a Blob
   return pdf.output('blob');
 }
