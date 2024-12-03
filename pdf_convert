@@ -25,13 +25,25 @@ convertToPDF(data: any[]): Blob {
   // Draw rows
   currentY += cellHeight; // Move to the next row
   data.forEach((row) => {
+    let maxCellHeight = cellHeight; // Track the tallest cell in the row
     headers.forEach((header, index) => {
       const xPos = margin + index * columnWidth;
-      pdf.rect(xPos, currentY, columnWidth, cellHeight); // Draw cell
       const cellText = row[header] !== undefined ? String(row[header]) : '';
-      pdf.text(cellText, xPos + cellPadding, currentY + cellHeight / 2 + 2); // Add cell text
+      
+      // Wrap text using splitTextToSize
+      const wrappedText = pdf.splitTextToSize(cellText, columnWidth - 2 * cellPadding);
+      const textHeight = wrappedText.length * 6; // Approximate height of text based on number of lines
+
+      // Update the max cell height for this row
+      maxCellHeight = Math.max(maxCellHeight, textHeight + cellPadding);
+
+      // Draw cell
+      pdf.rect(xPos, currentY, columnWidth, textHeight + cellPadding);
+      pdf.text(wrappedText, xPos + cellPadding, currentY + cellPadding + 4); // Add wrapped text
     });
-    currentY += cellHeight; // Move to the next row
+
+    // Move to the next row
+    currentY += maxCellHeight;
   });
 
   // Return the PDF as a Blob
