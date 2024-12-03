@@ -1,69 +1,75 @@
 convertToPDF(data: any[]): Blob {
   const pdf = new jsPDF();
   const pageWidth = pdf.internal.pageSize.getWidth();
-  const margin = 10; // Left and right margin
-  const cellPadding = 3; // Padding inside cells
+  const pageHeight = pdf.internal.pageSize.getHeight();
+  const margin = 10;
+  const cellPadding = 3;
   const lineHeight = 6; // Height of a single line of text
+  const maxHeight = pageHeight - margin * 2; // Maximum height to avoid overflow
   const headerHeight = 10; // Height for the header row
+  const columnSpacing = 5; // Space between columns
 
-  // Extract column headers
+  // Extract headers
   const headers = Object.keys(data[0]);
 
-  // Calculate column widths based on content and headers
-  const columnWidths = headers.map(header => {
-    const maxContentWidth = Math.max(
-      pdf.getTextWidth(header),
-      ...data.map(row => pdf.getTextWidth(String(row[header] || '')))
-    );
-    return maxContentWidth + cellPadding * 2; // Add padding to calculated width
-  });
+  // Calculate column widths proportionally
+  const totalColumns = headers.length;
+  const columnWidth = (pageWidth - margin * 2 - (totalColumns - 1) * columnSpacing) / totalColumns;
 
-  // Scale column widths to fit within the page width if needed
-  const totalWidth = columnWidths.reduce((sum, width) => sum + width, 0);
-  const scaleFactor = totalWidth > pageWidth - 2 * margin ? (pageWidth - 2 * margin) / totalWidth : 1;
-  const adjustedWidths = columnWidths.map(width => width * scaleFactor);
-
-  // Add a title
+  // Add Title
   pdf.text('Exported Data', margin, margin);
 
-  // Start drawing the table
-  let currentY = margin + 10; // Start position below the title
-  let currentX = margin;
+  // Starting Y position
+  let currentY = margin + 10;
 
-  // Draw header row
+  // Draw headers
+  pdf.setFont('Helvetica', 'bold');
   headers.forEach((header, index) => {
-    const columnWidth = adjustedWidths[index];
-    pdf.rect(currentX, currentY, columnWidth, headerHeight); // Draw the header cell
-    const wrappedHeader = pdf.splitTextToSize(header, columnWidth - cellPadding * 2); // Wrap text for header
-    pdf.text(wrappedHeader, currentX + cellPadding, currentY + headerHeight / 2 + lineHeight / 2); // Centered text
-    currentX += columnWidth;
+    const x = margin + index * (columnWidth + columnSpacing);
+    pdf.text(header, x + cellPadding, currentY);
   });
 
-  // Move to the first row
+  // Move to first data row
   currentY += headerHeight;
 
-  // Draw data rows
-  data.forEach(row => {
-    currentX = margin; // Reset X position for each row
-    let maxCellHeight = headerHeight; // Reset row height
+  // Draw rows
+  pdf.setFont('Helvetica', 'normal');
+  data.forEach((row, rowIndex) => {
+    // Check if the current row exceeds the page height
+    if (currentY + headerHeight > maxHeight) {
+      pdf.addPage();
+      currentY = margin; // Reset to the top of the new page
 
+      // Redraw headers on the new page
+      pdf.setFont('Helvetica', 'bold');
+      headers.forEach((header, index) => {
+        const x = margin + index * (columnWidth + columnSpacing);
+        pdf.text(header, x + cellPadding, currentY);
+      });
+      currentY += headerHeight;
+      pdf.setFont('Helvetica', 'normal');
+    }
+
+    // Draw each cell in the row
     headers.forEach((header, index) => {
-      const columnWidth = adjustedWidths[index];
+      const x = margin + index * (columnWidth + columnSpacing);
       const cellText = row[header] !== undefined ? String(row[header]) : '';
       const wrappedText = pdf.splitTextToSize(cellText, columnWidth - cellPadding * 2);
-      const cellHeight = wrappedText.length * lineHeight + cellPadding; // Calculate height based on wrapped text
 
-      maxCellHeight = Math.max(maxCellHeight, cellHeight); // Adjust row height based on tallest cell
+      // Add wrapped text line by line
+      wrappedText.forEach((line, lineIndex) => {
+        pdf.text(line, x + cellPadding, currentY + lineHeight * lineIndex);
+      });
 
-      // Draw the cell
-      pdf.rect(currentX, currentY, columnWidth, cellHeight); // Draw the cell rectangle
-      pdf.text(wrappedText, currentX + cellPadding, currentY + cellPadding + 4); // Add wrapped text
-      currentX += columnWidth; // Move to the next column
+      // Adjust Y for the tallest cell in the row
+      const cellHeight = wrappedText.length * lineHeight;
+      currentY = Math.max(currentY, currentY + cellHeight);
     });
 
-    currentY += maxCellHeight; // Move to the next row
+    // Add spacing for next row
+    currentY += cellPadding;
   });
 
-  // Return the PDF content as a Blob
+  // Return PDF as Blob
   return pdf.output('blob');
 }
