@@ -1,28 +1,11 @@
-Full Component Implementation
-Utility Method: Convert Color to RGB
-This utility function converts rgba(...) or rgb(...) strings into an RGB tuple [R, G, B].
-
-typescript
-Copy code
-convertColorToRGB(color: string): [number, number, number] {
-  const rgbaMatch = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
-  if (rgbaMatch) {
-    return [parseInt(rgbaMatch[1]), parseInt(rgbaMatch[2]), parseInt(rgbaMatch[3])];
-  }
-  return [255, 255, 255]; // Default to white if the color is invalid
-}
-Main Method: Generate PDF
-This method dynamically generates a PDF based on the extracted table data and applies computed styles.
-
-typescript
-Copy code
-generatePDF(): void {
-  const { headers, rows } = this.extractTableData();
-
-  if (headers.length === 0 || rows.length === 0) {
-    console.error('No data found in the table');
+generatePDFFromJSON(jsonData: any[]): void {
+  if (!jsonData || jsonData.length === 0) {
+    console.error('No data provided for the PDF');
     return;
   }
+
+  const headers = Object.keys(jsonData[0]); // Extract headers from JSON keys
+  const rows = jsonData.map((row) => Object.values(row)); // Extract row data from JSON values
 
   const pdf = new jsPDF();
   const pageWidth = pdf.internal.pageSize.getWidth();
@@ -42,16 +25,13 @@ generatePDF(): void {
   headers.forEach((header, index) => {
     const x = margin + index * columnWidth;
 
-    // Convert colors using the utility function
-    const textColor: [number, number, number] = this.convertColorToRGB(header.styles.color || 'rgb(0, 0, 0)');
-    const backgroundColor: [number, number, number] = this.convertColorToRGB(header.styles.backgroundColor || 'rgb(255, 255, 255)');
-
-    pdf.setFontSize(parseInt(header.styles.fontSize) || 10);
-    pdf.setFont(header.styles.fontWeight === 'bold' ? 'helvetica' : 'normal', 'bold');
-    pdf.setTextColor(...textColor);
-    pdf.setFillColor(...backgroundColor);
-    pdf.rect(x, y - fontHeight, columnWidth, fontHeight, 'F');
-    pdf.text(header.text, x + 2, y - 2);
+    // Default header styles
+    pdf.setFontSize(10);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(0, 0, 0); // Black text
+    pdf.setFillColor(230, 230, 230); // Light gray background
+    pdf.rect(x, y - fontHeight, columnWidth, fontHeight, 'F'); // Draw background
+    pdf.text(header, x + 2, y - 2); // Add header text
   });
   y += fontHeight;
 
@@ -60,16 +40,13 @@ generatePDF(): void {
     row.forEach((cell, index) => {
       const x = margin + index * columnWidth;
 
-      // Convert colors using the utility function
-      const textColor: [number, number, number] = this.convertColorToRGB(cell.styles.color || 'rgb(0, 0, 0)');
-      const backgroundColor: [number, number, number] = this.convertColorToRGB(cell.styles.backgroundColor || 'rgb(255, 255, 255)');
-
-      pdf.setFontSize(parseInt(cell.styles.fontSize) || 10);
-      pdf.setFont(cell.styles.fontWeight === 'bold' ? 'helvetica' : 'normal', 'normal');
-      pdf.setTextColor(...textColor);
-      pdf.setFillColor(...backgroundColor);
-      pdf.rect(x, y - fontHeight, columnWidth, fontHeight, 'F');
-      pdf.text(cell.text, x + 2, y - 2);
+      // Default row styles
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setTextColor(0, 0, 0); // Black text
+      pdf.setFillColor(255, 255, 255); // White background
+      pdf.rect(x, y - fontHeight, columnWidth, fontHeight, 'F'); // Draw background
+      pdf.text(cell?.toString(), x + 2, y - 2); // Add cell text
     });
     y += fontHeight;
 
@@ -82,71 +59,3 @@ generatePDF(): void {
 
   pdf.save('table.pdf');
 }
-Helper Method: Extract Table Data
-This method extracts headers, rows, and their styles from the table.
-
-typescript
-Copy code
-extractTableData(): { headers: { text: string; styles: any }[]; rows: { text: string; styles: any }[][] } {
-  const table = document.querySelector('mat-table') as HTMLElement;
-
-  if (!table) {
-    console.error('No <mat-table> found on the page');
-    return { headers: [], rows: [] };
-  }
-
-  const headers: { text: string; styles: any }[] = [];
-  const rows: { text: string; styles: any }[][] = [];
-
-  // Extract headers
-  const headerCells = table.querySelectorAll('mat-header-cell');
-  headerCells.forEach((cell) => {
-    const headerCell = cell as HTMLElement; // Cast to HTMLElement
-    headers.push({
-      text: headerCell.textContent?.trim() || '',
-      styles: window.getComputedStyle(headerCell), // Extract all computed styles
-    });
-  });
-
-  // Extract rows
-  const rowElements = table.querySelectorAll('mat-row');
-  rowElements.forEach((row) => {
-    const cells: { text: string; styles: any }[] = [];
-    row.querySelectorAll('mat-cell').forEach((cell) => {
-      const tableCell = cell as HTMLElement; // Cast to HTMLElement
-      cells.push({
-        text: tableCell.textContent?.trim() || '',
-        styles: window.getComputedStyle(tableCell), // Extract all computed styles
-      });
-    });
-    rows.push(cells);
-  });
-
-  return { headers, rows };
-}
-Trigger Method: downloadData
-This method triggers the PDF generation. Ensure your button calls this method.
-
-typescript
-Copy code
-downloadData(format: string): void {
-  if (format === 'pdf') {
-    this.generatePDF(); // Calls the generatePDF method
-  }
-}
-Usage in HTML
-Add a button in your component's template to trigger the download:
-
-html
-Copy code
-<button (click)="downloadData('pdf')">Download PDF</button>
-
-<mat-table [dataSource]="dataSource" [displayedColumns]="displayedColumns">
-  <ng-container *ngFor="let column of displayedColumns" [matColumnDef]="column">
-    <mat-header-cell *matHeaderCellDef>{{ column }}</mat-header-cell>
-    <mat-cell *matCellDef="let element">{{ element[column] }}</mat-cell>
-  </ng-container>
-
-  <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
-  <mat-row *matRowDef="let row; columns: displayedColumns;"></mat-row>
-</mat-table>
