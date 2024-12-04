@@ -1,7 +1,15 @@
-Updated Function to Extract Data and Styles
+
+Yes, you can extract all computed styles of a table directly using getComputedStyle for every element (e.g., headers, rows, and cells). This approach ensures that all final styles applied by the browser (from inline styles, classes, or external CSS) are used in the PDF generation.
+
+Here’s how you can modify the code to fetch all computed styles:
+
+Updated Implementation: Extract All Browser-Computed Styles
+Step 1: Extract Table Data with Computed Styles
+Modify the extractTableData function to fetch all computed styles for each table cell.
+
 typescript
 Copy code
-extractTableData(): { headers: { text: string; styles: any }[]; rows: { text: string; styles: any }[][] } {
+extractTableData(): { headers: { text: string; styles: CSSStyleDeclaration }[]; rows: { text: string; styles: CSSStyleDeclaration }[][] } {
   const table = document.querySelector('mat-table') as HTMLElement;
 
   if (!table) {
@@ -9,42 +17,28 @@ extractTableData(): { headers: { text: string; styles: any }[]; rows: { text: st
     return { headers: [], rows: [] };
   }
 
-  const headers: { text: string; styles: any }[] = [];
-  const rows: { text: string; styles: any }[][] = [];
+  const headers: { text: string; styles: CSSStyleDeclaration }[] = [];
+  const rows: { text: string; styles: CSSStyleDeclaration }[][] = [];
 
-  // Extract headers with styles
+  // Extract headers
   const headerCells = table.querySelectorAll('mat-header-cell');
   headerCells.forEach((cell) => {
     const headerCell = cell as HTMLElement; // Cast to HTMLElement
-    const styles = window.getComputedStyle(headerCell); // Extract computed styles
     headers.push({
       text: headerCell.textContent?.trim() || '',
-      styles: {
-        fontSize: styles.fontSize,
-        fontWeight: styles.fontWeight,
-        textAlign: styles.textAlign,
-        backgroundColor: styles.backgroundColor,
-        color: styles.color,
-      },
+      styles: window.getComputedStyle(headerCell), // Get all computed styles
     });
   });
 
-  // Extract rows with styles
+  // Extract rows
   const rowElements = table.querySelectorAll('mat-row');
   rowElements.forEach((row) => {
-    const cells: { text: string; styles: any }[] = [];
+    const cells: { text: string; styles: CSSStyleDeclaration }[] = [];
     row.querySelectorAll('mat-cell').forEach((cell) => {
       const tableCell = cell as HTMLElement; // Cast to HTMLElement
-      const styles = window.getComputedStyle(tableCell); // Extract computed styles
       cells.push({
         text: tableCell.textContent?.trim() || '',
-        styles: {
-          fontSize: styles.fontSize,
-          fontWeight: styles.fontWeight,
-          textAlign: styles.textAlign,
-          backgroundColor: styles.backgroundColor,
-          color: styles.color,
-        },
+        styles: window.getComputedStyle(tableCell), // Get all computed styles
       });
     });
     rows.push(cells);
@@ -52,8 +46,8 @@ extractTableData(): { headers: { text: string; styles: any }[]; rows: { text: st
 
   return { headers, rows };
 }
-Updated generatePDF Function
-This function now applies the extracted CSS styles (font size, text alignment, background color, etc.) while rendering the table into the PDF.
+Step 2: Generate PDF Using Computed Styles
+The generatePDF function applies the extracted computed styles to the PDF. Here's the updated function:
 
 typescript
 Copy code
@@ -70,8 +64,8 @@ generatePDF(): void {
   const pdf = new jsPDF();
   const pageWidth = pdf.internal.pageSize.getWidth();
   const margin = 10;
-  const fontHeight = 10;
   let y = margin;
+  const fontHeight = 10;
 
   // Add Title
   pdf.setFontSize(14);
@@ -81,32 +75,32 @@ generatePDF(): void {
   // Calculate Column Widths
   const columnWidth = (pageWidth - 2 * margin) / headers.length;
 
-  // Render Headers with Styles
+  // Render Headers
   headers.forEach((header, index) => {
     const x = margin + index * columnWidth;
 
-    // Apply header styles
+    // Apply computed styles for headers
     pdf.setFontSize(parseInt(header.styles.fontSize) || 10);
     pdf.setFont(header.styles.fontWeight === 'bold' ? 'helvetica' : 'normal', 'bold');
     pdf.setTextColor(header.styles.color || '#000000');
     pdf.setFillColor(header.styles.backgroundColor || '#f2f2f2');
     pdf.rect(x, y - fontHeight, columnWidth, fontHeight, 'F'); // Draw background
-    pdf.text(header.text, x + 2, y - 2, { align: header.styles.textAlign || 'left' }); // Add text
+    pdf.text(header.text, x + 2, y - 2); // Add text
   });
   y += fontHeight;
 
-  // Render Rows with Styles
+  // Render Rows
   rows.forEach((row) => {
     row.forEach((cell, index) => {
       const x = margin + index * columnWidth;
 
-      // Apply cell styles
+      // Apply computed styles for rows
       pdf.setFontSize(parseInt(cell.styles.fontSize) || 10);
       pdf.setFont(cell.styles.fontWeight === 'bold' ? 'helvetica' : 'normal', 'normal');
       pdf.setTextColor(cell.styles.color || '#000000');
       pdf.setFillColor(cell.styles.backgroundColor || '#ffffff');
       pdf.rect(x, y - fontHeight, columnWidth, fontHeight, 'F'); // Draw background
-      pdf.text(cell.text, x + 2, y - 2, { align: cell.styles.textAlign || 'left' }); // Add text
+      pdf.text(cell.text, x + 2, y - 2); // Add text
     });
     y += fontHeight;
 
