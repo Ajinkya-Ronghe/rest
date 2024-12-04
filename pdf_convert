@@ -1,110 +1,109 @@
-Step 1: Convert JSON to HTML Table
-Create a utility function to generate an HTML table from JSON data. This function will dynamically create the table based on the keys and values in the JSON object.
+The issue with selecting text in the generated PDF arises because html2pdf.js converts the HTML content to a canvas (image) using html2canvas before embedding it into the PDF. This means the text is effectively rendered as an image, not selectable text.
 
-Utility Function: JSON to HTML Table
+To fix this and generate a PDF with selectable text, you can use jsPDF directly instead of html2pdf.js and programmatically insert the table's text into the PDF. Here's how:
+
+Solution: Use jsPDF to Create a Selectable Text Table
+Step 1: Extract Table Data
+You need to read the table's structure (headers and rows) from the DOM.
+
 typescript
 Copy code
-generateHTMLTable(data: any[]): string {
-  if (!data || data.length === 0) {
-    return '<p>No data available</p>';
+extractTableData(): { headers: string[], rows: string[][] } {
+  const table = document.getElementById('table-to-export') as HTMLTableElement;
+
+  if (!table) {
+    console.error('Table with ID "table-to-export" not found');
+    return { headers: [], rows: [] };
   }
 
-  // Generate table headers
-  const headers = Object.keys(data[0]);
-  let table = '<table border="1" style="width: 100%; border-collapse: collapse; text-align: left;">';
-  table += '<thead><tr>';
-  headers.forEach(header => {
-    table += `<th style="padding: 5px; background-color: #f2f2f2;">${header}</th>`;
-  });
-  table += '</tr></thead>';
+  const headers: string[] = [];
+  const rows: string[][] = [];
 
-  // Generate table rows
-  table += '<tbody>';
-  data.forEach(row => {
-    table += '<tr>';
-    headers.forEach(header => {
-      table += `<td style="padding: 5px;">${row[header] || ''}</td>`;
+  // Extract headers
+  const headerElements = table.querySelectorAll('thead th');
+  headerElements.forEach(header => {
+    headers.push(header.textContent?.trim() || '');
+  });
+
+  // Extract rows
+  const rowElements = table.querySelectorAll('tbody tr');
+  rowElements.forEach(row => {
+    const cells: string[] = [];
+    row.querySelectorAll('td').forEach(cell => {
+      cells.push(cell.textContent?.trim() || '');
     });
-    table += '</tr>';
+    rows.push(cells);
   });
-  table += '</tbody></table>';
 
-  return table;
+  return { headers, rows };
 }
-Step 2: Insert Table into a Hidden Div
-In your Angular template, include a hidden div to render the HTML table. This div will hold the dynamically generated table:
+Step 2: Generate a PDF Using jsPDF
+Use the extracted table data to create a table in the PDF with selectable text.
 
-Angular Template
-html
-Copy code
-<div id="pdfTable" style="display: none;"></div>
-Step 3: Generate Table and Convert to PDF
-Use the generateHTMLTable function to populate the pdfTable div and then convert it to PDF using html2pdf.js.
-
-Updated convertToPDF Function
 typescript
 Copy code
-import * as html2pdf from 'html2pdf.js';
+import { jsPDF } from 'jspdf';
 
-convertToPDF(jsonData: any[]): Promise<Blob> {
-  const element = document.getElementById('pdfTable');
+generatePDFWithSelectableText(): void {
+  const { headers, rows } = this.extractTableData();
 
-  if (!element) {
-    console.error('Element with ID "pdfTable" not found');
-    return Promise.reject('HTML element not found');
+  if (headers.length === 0 || rows.length === 0) {
+    console.error('No table data found');
+    return;
   }
 
-  // Generate the HTML table and insert it into the div
-  element.innerHTML = this.generateHTMLTable(jsonData);
+  const pdf = new jsPDF();
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const margin = 10;
+  let y = margin + 10; // Start position for table
 
-  const options = {
-    margin: 10,
-    html2canvas: { scale: 2 }, // High resolution
-    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-  };
+  // Add title
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('Exported Table', margin, y);
+  y += 10; // Move below the title
 
-  // Convert the HTML table to a PDF and return a Blob
-  return new Promise((resolve, reject) => {
-    html2pdf()
-      .from(element)
-      .set(options)
-      .outputPdf('blob') // Generate as Blob
-      .then((blob: Blob) => resolve(blob))
-      .catch((error: any) => reject(error));
+  // Column widths (divide equally for simplicity)
+  const columnWidth = (pageWidth - margin * 2) / headers.length;
+
+  // Draw headers
+  pdf.setFont('helvetica', 'bold');
+  headers.forEach((header, index) => {
+    const x = margin + index * columnWidth;
+    pdf.text(header, x, y, { baseline: 'top' });
   });
+
+  y += 10; // Move below the header
+
+  // Draw rows
+  pdf.setFont('helvetica', 'normal');
+  rows.forEach(row => {
+    row.forEach((cell, index) => {
+      const x = margin + index * columnWidth;
+      pdf.text(cell, x, y, { baseline: 'top' });
+    });
+    y += 10; // Move to the next row
+  });
+
+  // Save the PDF
+  pdf.save('table.pdf');
 }
-Step 4: Integrate with downloadData
-Update the downloadData method to convert the JSON to a PDF:
+Step 3: Integrate Into Your Component
+Call the generatePDFWithSelectableText() method when the user requests a PDF download.
 
 typescript
 Copy code
 downloadData(format: string): void {
-  const data = this.data.dataSource; // Assuming dataSource contains your JSON array
-  let content: Blob;
-
   if (format === 'pdf') {
-    this.convertToPDF(data)
-      .then((pdfContent: Blob) => {
-        this.downloadFile(pdfContent, 'data.pdf', 'application/pdf');
-      })
-      .catch(error => {
-        console.error('Error generating PDF:', error);
-      });
+    this.generatePDFWithSelectableText();
   }
 
   this.dialogRef.close();
 }
-Step 5: Download Utility Function
-Ensure the downloadFile function is included:
-
-typescript
-Copy code
-downloadFile(content: Blob, fileName: string, fileType: string): void {
-  const blob = new Blob([content], { type: fileType });
-  const url = window.URL.createObjectURL(blob);
-  const anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.download = fileName;
-  anchor.click();
-  window.URL.revokeObjectURL(url); // Clean up
-}
+Advantages of This Approach
+Selectable Text: The text in the PDF is selectable and searchable because it’s rendered as actual text, not an image.
+Lightweight Output: Since text is stored as characters instead of an image, the file size is smaller.
+Customizable Layout: You can adjust font sizes, styles, and alignments for better presentation.
+Limitations
+Manual Formatting: You’ll need to handle table formatting (e.g., column widths, borders) manually.
+Complex Tables: Advanced features like rowspan/colspan are harder to manage programmatically.
+Let me know if you need help customizing the table formatting or enhancing this functionality further!
