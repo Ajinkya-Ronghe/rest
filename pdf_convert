@@ -1,53 +1,143 @@
-Option 2: Extract Data and Build the Table Dynamically
-Instead of relying on Angular Material's DOM structure, extract the table data programmatically from your dataSource and displayedColumns.
+If every dashboard contains only one table, you don't need to rely on the id. Instead, you can simply select the table dynamically from the DOM using a generic selector (e.g., the first <mat-table> found on the page). This approach avoids requiring a unique id for each table.
 
-Generate a Custom Table for the PDF:
+Updated Implementation: No ID Required
+Step 1: Select the First <mat-table> in the DOM
+Modify the extractTableData function to dynamically find the first <mat-table> on the page:
+
 typescript
 Copy code
-generateHTMLTable(): string {
-  if (!this.dataSource || this.dataSource.length === 0) {
-    return '<p>No data available</p>';
+extractTableData(): { headers: string[]; rows: string[][] } {
+  const table = document.querySelector('mat-table') as HTMLElement;
+
+  if (!table) {
+    console.error('No <mat-table> found on the page');
+    return { headers: [], rows: [] };
   }
 
-  const headers = this.displayedColumns;
-  let table = '<table border="1" style="width: 100%; border-collapse: collapse; text-align: left;">';
-  table += '<thead><tr>';
-  headers.forEach(header => {
-    table += `<th style="padding: 5px; background-color: #f2f2f2;">${header}</th>`;
-  });
-  table += '</tr></thead>';
+  const headers: string[] = [];
+  const rows: string[][] = [];
 
-  table += '<tbody>';
-  this.dataSource.forEach((row: any) => {
-    table += '<tr>';
-    headers.forEach(column => {
-      table += `<td style="padding: 5px;">${row[column] || ''}</td>`;
+  // Extract headers
+  const headerCells = table.querySelectorAll('mat-header-cell');
+  headerCells.forEach((cell: Element) => {
+    headers.push(cell.textContent?.trim() || '');
+  });
+
+  // Extract rows
+  const rowElements = table.querySelectorAll('mat-row');
+  rowElements.forEach((row: Element) => {
+    const cells: string[] = [];
+    row.querySelectorAll('mat-cell').forEach((cell: Element) => {
+      cells.push(cell.textContent?.trim() || '');
     });
-    table += '</tr>';
+    rows.push(cells);
   });
-  table += '</tbody></table>';
 
-  return table;
+  return { headers, rows };
 }
-Updated convertToPDF Function:
+Step 2: Generate PDF
+The generatePDF() function remains the same and uses the extracted table data to generate a PDF.
+
 typescript
 Copy code
-convertToPDF(): Promise<Blob> {
-  const element = document.createElement('div');
-  element.innerHTML = this.generateHTMLTable(); // Generate the table HTML dynamically
+import { jsPDF } from 'jspdf';
 
-  const options = {
-    margin: 10,
-    html2canvas: { scale: 2 },
-    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-  };
+generatePDF(): void {
+  const { headers, rows } = this.extractTableData();
 
-  return new Promise((resolve, reject) => {
-    html2pdf()
-      .from(element)
-      .set(options)
-      .outputPdf('blob')
-      .then((blob: Blob) => resolve(blob))
-      .catch((error: any) => reject(error));
+  if (headers.length === 0 || rows.length === 0) {
+    console.error('No data found in the table');
+    return;
+  }
+
+  const pdf = new jsPDF();
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const margin = 10;
+  const fontHeight = 10;
+  let y = margin;
+
+  // Add Title
+  pdf.setFontSize(14);
+  pdf.text('Exported Table', margin, y);
+  y += fontHeight + 5;
+
+  // Calculate Column Widths
+  const columnWidth = (pageWidth - 2 * margin) / headers.length;
+
+  // Add Headers
+  pdf.setFontSize(10);
+  pdf.setFont('helvetica', 'bold');
+  headers.forEach((header, index) => {
+    const x = margin + index * columnWidth;
+    pdf.text(header, x, y);
   });
+  y += fontHeight;
+
+  // Add Rows
+  pdf.setFont('helvetica', 'normal');
+  rows.forEach((row) => {
+    row.forEach((cell, index) => {
+      const x = margin + index * columnWidth;
+      pdf.text(cell, x, y);
+    });
+    y += fontHeight;
+
+    // Add a new page if necessary
+    if (y + fontHeight > pdf.internal.pageSize.getHeight() - margin) {
+      pdf.addPage();
+      y = margin;
+    }
+  });
+
+  // Save PDF
+  pdf.save('table.pdf');
 }
+Step 3: Update downloadData Method
+The downloadData method will call generatePDF() directly without needing an id.
+
+typescript
+Copy code
+downloadData(format: string): void {
+  if (format === 'pdf') {
+    this.generatePDF();
+  }
+}
+Step 4: Use in Any Dashboard
+Simply ensure each dashboard contains one <mat-table>. No additional changes are needed in your existing dashboards.
+
+HTML Example:
+
+html
+Copy code
+<mat-table [dataSource]="dataSource" [displayedColumns]="displayedColumns">
+  <ng-container *ngFor="let column of displayedColumns" [matColumnDef]="column">
+    <mat-header-cell *matHeaderCellDef>{{ column }}</mat-header-cell>
+    <mat-cell *matCellDef="let element">{{ element[column] }}</mat-cell>
+  </ng-container>
+
+  <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
+  <mat-row *matRowDef="let row; columns: displayedColumns;"></mat-row>
+</mat-table>
+
+<button (click)="downloadData('pdf')">Download PDF</button>
+Key Features of This Approach
+No id Required:
+
+The first <mat-table> on the page is automatically selected.
+Works seamlessly if there’s only one table per dashboard.
+Selectable Text:
+
+The PDF contains selectable and searchable text using jsPDF.
+Minimal Changes:
+
+No changes to the existing project structure or dashboard HTML.
+The code is reusable across dashboards without additional configuration.
+Optional Enhancements
+1. Handle Multiple Tables (if needed later)
+If you might add multiple <mat-table> elements in the future, consider selecting a specific table dynamically:
+
+typescript
+Copy code
+const table = document.querySelectorAll('mat-table')[0]; // First table
+2. Add Styles
+You can customize the styles for the PDF (e.g., bold headers, dynamic column widths).
