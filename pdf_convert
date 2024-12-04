@@ -1,8 +1,7 @@
-background color) for each cell.
-
+Updated Function to Extract Data and Styles
 typescript
 Copy code
-extractTableData(): { headers: { text: string; style: any }[]; rows: { text: string; style: any }[][] } {
+extractTableData(): { headers: { text: string; styles: any }[]; rows: { text: string; styles: any }[][] } {
   const table = document.querySelector('mat-table') as HTMLElement;
 
   if (!table) {
@@ -10,28 +9,42 @@ extractTableData(): { headers: { text: string; style: any }[]; rows: { text: str
     return { headers: [], rows: [] };
   }
 
-  const headers: { text: string; style: any }[] = [];
-  const rows: { text: string; style: any }[][] = [];
+  const headers: { text: string; styles: any }[] = [];
+  const rows: { text: string; styles: any }[][] = [];
 
-  // Extract headers
+  // Extract headers with styles
   const headerCells = table.querySelectorAll('mat-header-cell');
   headerCells.forEach((cell) => {
     const headerCell = cell as HTMLElement; // Cast to HTMLElement
+    const styles = window.getComputedStyle(headerCell); // Extract computed styles
     headers.push({
       text: headerCell.textContent?.trim() || '',
-      style: window.getComputedStyle(headerCell), // Extract computed styles
+      styles: {
+        fontSize: styles.fontSize,
+        fontWeight: styles.fontWeight,
+        textAlign: styles.textAlign,
+        backgroundColor: styles.backgroundColor,
+        color: styles.color,
+      },
     });
   });
 
-  // Extract rows
+  // Extract rows with styles
   const rowElements = table.querySelectorAll('mat-row');
   rowElements.forEach((row) => {
-    const cells: { text: string; style: any }[] = [];
+    const cells: { text: string; styles: any }[] = [];
     row.querySelectorAll('mat-cell').forEach((cell) => {
       const tableCell = cell as HTMLElement; // Cast to HTMLElement
+      const styles = window.getComputedStyle(tableCell); // Extract computed styles
       cells.push({
         text: tableCell.textContent?.trim() || '',
-        style: window.getComputedStyle(tableCell), // Extract computed styles
+        styles: {
+          fontSize: styles.fontSize,
+          fontWeight: styles.fontWeight,
+          textAlign: styles.textAlign,
+          backgroundColor: styles.backgroundColor,
+          color: styles.color,
+        },
       });
     });
     rows.push(cells);
@@ -39,12 +52,13 @@ extractTableData(): { headers: { text: string; style: any }[]; rows: { text: str
 
   return { headers, rows };
 }
-
-Step 2: Modify generatePDF
-Apply the extracted styles (like font size, boldness, and background color) to the PDF while rendering the headers and rows.
+Updated generatePDF Function
+This function now applies the extracted CSS styles (font size, text alignment, background color, etc.) while rendering the table into the PDF.
 
 typescript
 Copy code
+import { jsPDF } from 'jspdf';
+
 generatePDF(): void {
   const { headers, rows } = this.extractTableData();
 
@@ -67,30 +81,32 @@ generatePDF(): void {
   // Calculate Column Widths
   const columnWidth = (pageWidth - 2 * margin) / headers.length;
 
-  // Add Headers with Styling
+  // Render Headers with Styles
   headers.forEach((header, index) => {
     const x = margin + index * columnWidth;
 
     // Apply header styles
-    pdf.setFontSize(parseInt(header.style.fontSize) || 10);
-    pdf.setFont(header.style.fontWeight === 'bold' ? 'helvetica' : 'normal', 'bold');
-    pdf.setFillColor(header.style.backgroundColor || '#f2f2f2');
-    pdf.rect(x, y - fontHeight, columnWidth, fontHeight, 'F'); // Draw filled background
-    pdf.text(header.text, x + 2, y - 2); // Add text with padding
+    pdf.setFontSize(parseInt(header.styles.fontSize) || 10);
+    pdf.setFont(header.styles.fontWeight === 'bold' ? 'helvetica' : 'normal', 'bold');
+    pdf.setTextColor(header.styles.color || '#000000');
+    pdf.setFillColor(header.styles.backgroundColor || '#f2f2f2');
+    pdf.rect(x, y - fontHeight, columnWidth, fontHeight, 'F'); // Draw background
+    pdf.text(header.text, x + 2, y - 2, { align: header.styles.textAlign || 'left' }); // Add text
   });
   y += fontHeight;
 
-  // Add Rows with Styling
+  // Render Rows with Styles
   rows.forEach((row) => {
     row.forEach((cell, index) => {
       const x = margin + index * columnWidth;
 
       // Apply cell styles
-      pdf.setFontSize(parseInt(cell.style.fontSize) || 10);
-      pdf.setFont('helvetica', 'normal');
-      pdf.setFillColor(cell.style.backgroundColor || '#ffffff');
-      pdf.rect(x, y - fontHeight, columnWidth, fontHeight, 'F'); // Draw filled background
-      pdf.text(cell.text, x + 2, y - 2); // Add text with padding
+      pdf.setFontSize(parseInt(cell.styles.fontSize) || 10);
+      pdf.setFont(cell.styles.fontWeight === 'bold' ? 'helvetica' : 'normal', 'normal');
+      pdf.setTextColor(cell.styles.color || '#000000');
+      pdf.setFillColor(cell.styles.backgroundColor || '#ffffff');
+      pdf.rect(x, y - fontHeight, columnWidth, fontHeight, 'F'); // Draw background
+      pdf.text(cell.text, x + 2, y - 2, { align: cell.styles.textAlign || 'left' }); // Add text
     });
     y += fontHeight;
 
