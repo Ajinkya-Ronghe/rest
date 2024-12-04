@@ -1,109 +1,53 @@
-The issue with selecting text in the generated PDF arises because html2pdf.js converts the HTML content to a canvas (image) using html2canvas before embedding it into the PDF. This means the text is effectively rendered as an image, not selectable text.
+Option 2: Extract Data and Build the Table Dynamically
+Instead of relying on Angular Material's DOM structure, extract the table data programmatically from your dataSource and displayedColumns.
 
-To fix this and generate a PDF with selectable text, you can use jsPDF directly instead of html2pdf.js and programmatically insert the table's text into the PDF. Here's how:
-
-Solution: Use jsPDF to Create a Selectable Text Table
-Step 1: Extract Table Data
-You need to read the table's structure (headers and rows) from the DOM.
-
+Generate a Custom Table for the PDF:
 typescript
 Copy code
-extractTableData(): { headers: string[], rows: string[][] } {
-  const table = document.getElementById('table-to-export') as HTMLTableElement;
-
-  if (!table) {
-    console.error('Table with ID "table-to-export" not found');
-    return { headers: [], rows: [] };
+generateHTMLTable(): string {
+  if (!this.dataSource || this.dataSource.length === 0) {
+    return '<p>No data available</p>';
   }
 
-  const headers: string[] = [];
-  const rows: string[][] = [];
-
-  // Extract headers
-  const headerElements = table.querySelectorAll('thead th');
-  headerElements.forEach(header => {
-    headers.push(header.textContent?.trim() || '');
+  const headers = this.displayedColumns;
+  let table = '<table border="1" style="width: 100%; border-collapse: collapse; text-align: left;">';
+  table += '<thead><tr>';
+  headers.forEach(header => {
+    table += `<th style="padding: 5px; background-color: #f2f2f2;">${header}</th>`;
   });
+  table += '</tr></thead>';
 
-  // Extract rows
-  const rowElements = table.querySelectorAll('tbody tr');
-  rowElements.forEach(row => {
-    const cells: string[] = [];
-    row.querySelectorAll('td').forEach(cell => {
-      cells.push(cell.textContent?.trim() || '');
+  table += '<tbody>';
+  this.dataSource.forEach((row: any) => {
+    table += '<tr>';
+    headers.forEach(column => {
+      table += `<td style="padding: 5px;">${row[column] || ''}</td>`;
     });
-    rows.push(cells);
+    table += '</tr>';
   });
+  table += '</tbody></table>';
 
-  return { headers, rows };
+  return table;
 }
-Step 2: Generate a PDF Using jsPDF
-Use the extracted table data to create a table in the PDF with selectable text.
-
+Updated convertToPDF Function:
 typescript
 Copy code
-import { jsPDF } from 'jspdf';
+convertToPDF(): Promise<Blob> {
+  const element = document.createElement('div');
+  element.innerHTML = this.generateHTMLTable(); // Generate the table HTML dynamically
 
-generatePDFWithSelectableText(): void {
-  const { headers, rows } = this.extractTableData();
+  const options = {
+    margin: 10,
+    html2canvas: { scale: 2 },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+  };
 
-  if (headers.length === 0 || rows.length === 0) {
-    console.error('No table data found');
-    return;
-  }
-
-  const pdf = new jsPDF();
-  const pageWidth = pdf.internal.pageSize.getWidth();
-  const margin = 10;
-  let y = margin + 10; // Start position for table
-
-  // Add title
-  pdf.setFont('helvetica', 'bold');
-  pdf.text('Exported Table', margin, y);
-  y += 10; // Move below the title
-
-  // Column widths (divide equally for simplicity)
-  const columnWidth = (pageWidth - margin * 2) / headers.length;
-
-  // Draw headers
-  pdf.setFont('helvetica', 'bold');
-  headers.forEach((header, index) => {
-    const x = margin + index * columnWidth;
-    pdf.text(header, x, y, { baseline: 'top' });
+  return new Promise((resolve, reject) => {
+    html2pdf()
+      .from(element)
+      .set(options)
+      .outputPdf('blob')
+      .then((blob: Blob) => resolve(blob))
+      .catch((error: any) => reject(error));
   });
-
-  y += 10; // Move below the header
-
-  // Draw rows
-  pdf.setFont('helvetica', 'normal');
-  rows.forEach(row => {
-    row.forEach((cell, index) => {
-      const x = margin + index * columnWidth;
-      pdf.text(cell, x, y, { baseline: 'top' });
-    });
-    y += 10; // Move to the next row
-  });
-
-  // Save the PDF
-  pdf.save('table.pdf');
 }
-Step 3: Integrate Into Your Component
-Call the generatePDFWithSelectableText() method when the user requests a PDF download.
-
-typescript
-Copy code
-downloadData(format: string): void {
-  if (format === 'pdf') {
-    this.generatePDFWithSelectableText();
-  }
-
-  this.dialogRef.close();
-}
-Advantages of This Approach
-Selectable Text: The text in the PDF is selectable and searchable because it’s rendered as actual text, not an image.
-Lightweight Output: Since text is stored as characters instead of an image, the file size is smaller.
-Customizable Layout: You can adjust font sizes, styles, and alignments for better presentation.
-Limitations
-Manual Formatting: You’ll need to handle table formatting (e.g., column widths, borders) manually.
-Complex Tables: Advanced features like rowspan/colspan are harder to manage programmatically.
-Let me know if you need help customizing the table formatting or enhancing this functionality further!
