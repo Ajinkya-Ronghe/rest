@@ -15,21 +15,23 @@ extractTableData(): { headers: { text: string; style: any }[]; rows: { text: str
 
   // Extract headers
   const headerCells = table.querySelectorAll('mat-header-cell');
-  headerCells.forEach((cell: HTMLElement) => {
+  headerCells.forEach((cell) => {
+    const headerCell = cell as HTMLElement; // Cast to HTMLElement
     headers.push({
-      text: cell.textContent?.trim() || '',
-      style: window.getComputedStyle(cell), // Extract computed styles
+      text: headerCell.textContent?.trim() || '',
+      style: window.getComputedStyle(headerCell), // Extract computed styles
     });
   });
 
   // Extract rows
   const rowElements = table.querySelectorAll('mat-row');
-  rowElements.forEach((row: HTMLElement) => {
+  rowElements.forEach((row) => {
     const cells: { text: string; style: any }[] = [];
-    row.querySelectorAll('mat-cell').forEach((cell: HTMLElement) => {
+    row.querySelectorAll('mat-cell').forEach((cell) => {
+      const tableCell = cell as HTMLElement; // Cast to HTMLElement
       cells.push({
-        text: cell.textContent?.trim() || '',
-        style: window.getComputedStyle(cell), // Extract computed styles
+        text: tableCell.textContent?.trim() || '',
+        style: window.getComputedStyle(tableCell), // Extract computed styles
       });
     });
     rows.push(cells);
@@ -37,6 +39,7 @@ extractTableData(): { headers: { text: string; style: any }[]; rows: { text: str
 
   return { headers, rows };
 }
+
 Step 2: Modify generatePDF
 Apply the extracted styles (like font size, boldness, and background color) to the PDF while rendering the headers and rows.
 
