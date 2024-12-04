@@ -4,9 +4,14 @@ generatePDFFromJSON(jsonData: any[]): void {
     return;
   }
 
-  const headers = Object.keys(jsonData[0]); // Extract headers from JSON keys
+  // Extract all unique keys as headers
+  const headers = Array.from(
+    new Set(jsonData.flatMap((row) => Object.keys(row))) // Combine keys from all rows
+  );
+
+  // Ensure rows map to all headers
   const rows = jsonData.map((row) =>
-    headers.map((header) => row[header] || '') // Map each row, filling missing columns with empty strings
+    headers.map((header) => (row[header] !== undefined ? row[header] : '')) // Fill missing columns with empty strings
   );
 
   const pdf = new jsPDF();
@@ -50,7 +55,7 @@ generatePDFFromJSON(jsonData: any[]): void {
       pdf.rect(x, y - fontHeight, columnWidth, fontHeight, 'F'); // Draw background
 
       // Split text to fit within the column width
-      const wrappedText = pdf.splitTextToSize(cell.toString(), columnWidth - 4);
+      const wrappedText = pdf.splitTextToSize(cell?.toString(), columnWidth - 4);
       pdf.text(wrappedText, x + 2, y - 2); // Add wrapped text
     });
     y += fontHeight * 1.5; // Adjust row height based on wrapped text
