@@ -32,7 +32,7 @@ generatePDFFromJSON(jsonData: any[]): void {
   pdf.text(title, pageWidth / 2, y, { align: 'center' });
   y += fontHeight + 5;
 
-  // Function to render headers with wrapped text
+  // Function to render headers with wrapped text and full background color
   const renderHeaders = () => {
     let headerMaxHeight = fontHeight;
 
@@ -46,12 +46,14 @@ generatePDFFromJSON(jsonData: any[]): void {
       // Adjust header row height dynamically
       headerMaxHeight = Math.max(headerMaxHeight, headerHeight);
 
-      // Header styles
+      // Draw full background for the header cell
+      pdf.setFillColor(230, 230, 230); // Light gray background
+      pdf.rect(x, y, columnWidth, headerHeight, 'F'); // Draw background
+
+      // Add wrapped header text
       pdf.setFontSize(10);
       pdf.setFont('helvetica', 'bold');
       pdf.setTextColor(0, 0, 0); // Black text
-      pdf.setFillColor(230, 230, 230); // Light gray background
-      pdf.rect(x, y, columnWidth, headerHeight, 'F'); // Draw background
       pdf.text(wrappedHeaderText, x + 2, y + fontHeight - 2); // Add wrapped text
     });
     y += headerMaxHeight;
@@ -77,8 +79,10 @@ generatePDFFromJSON(jsonData: any[]): void {
       const wrappedText = pdf.splitTextToSize(cell?.toString(), columnWidth - 4);
       const cellHeight = wrappedText.length * fontHeight * 0.75; // Calculate height based on wrapped text
 
-      // Draw background for the cell
-      pdf.rect(x, y, columnWidth, cellHeight, 'F');
+      // Draw full background for the cell
+      pdf.rect(x, y, columnWidth, cellHeight, 'F'); // Draw background
+
+      // Add wrapped cell text
       pdf.text(wrappedText, x + 2, y + fontHeight - 2); // Add wrapped text
 
       // Update max row height
