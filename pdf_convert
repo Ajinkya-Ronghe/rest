@@ -6,64 +6,73 @@ generatePDFFromJSON(jsonData: any[]): void {
 
   // Extract all unique keys as headers
   const headers = Array.from(
-    new Set(jsonData.flatMap((row) => Object.keys(row))) // Combine keys from all rows
+    new Set(jsonData.flatMap((row) => Object.keys(row)))
   );
 
   // Ensure rows map to all headers
   const rows = jsonData.map((row) =>
-    headers.map((header) => (row[header] !== undefined ? row[header] : '')) // Fill missing columns with empty strings
+    headers.map((header) => (row[header] !== undefined ? row[header] : ''))
   );
 
   const pdf = new jsPDF();
   const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
   const margin = 10;
   const fontHeight = 10;
+  const columnWidth = (pageWidth - 2 * margin) / headers.length;
   let y = margin;
 
-  // Add Title
-  pdf.setFontSize(14);
-  pdf.text('Exported Table', margin, y);
-  y += fontHeight + 5;
+  // Function to render headers
+  const renderHeaders = () => {
+    headers.forEach((header, index) => {
+      const x = margin + index * columnWidth;
 
-  // Calculate Column Widths
-  const columnWidth = (pageWidth - 2 * margin) / headers.length;
+      // Header styles
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setTextColor(0, 0, 0); // Black text
+      pdf.setFillColor(230, 230, 230); // Light gray background
+      pdf.rect(x, y, columnWidth, fontHeight, 'F'); // Draw background
+      pdf.text(header, x + 2, y + fontHeight - 2); // Add header text
+    });
+    y += fontHeight;
+  };
 
-  // Render Headers
-  headers.forEach((header, index) => {
-    const x = margin + index * columnWidth;
+  // Render headers on the first page
+  renderHeaders();
 
-    // Default header styles
-    pdf.setFontSize(10);
-    pdf.setFont('helvetica', 'bold');
-    pdf.setTextColor(0, 0, 0); // Black text
-    pdf.setFillColor(230, 230, 230); // Light gray background
-    pdf.rect(x, y - fontHeight, columnWidth, fontHeight, 'F'); // Draw background
-    pdf.text(header, x + 2, y - 2); // Add header text
-  });
-  y += fontHeight;
-
-  // Render Rows
+  // Render rows
   rows.forEach((row) => {
+    let maxRowHeight = fontHeight; // Initialize maximum row height
+
     row.forEach((cell, index) => {
       const x = margin + index * columnWidth;
 
-      // Default row styles
+      // Cell styles
       pdf.setFontSize(10);
       pdf.setFont('helvetica', 'normal');
       pdf.setTextColor(0, 0, 0); // Black text
       pdf.setFillColor(255, 255, 255); // White background
-      pdf.rect(x, y - fontHeight, columnWidth, fontHeight, 'F'); // Draw background
 
-      // Split text to fit within the column width
+      // Split text to fit within the column
       const wrappedText = pdf.splitTextToSize(cell?.toString(), columnWidth - 4);
-      pdf.text(wrappedText, x + 2, y - 2); // Add wrapped text
-    });
-    y += fontHeight * 1.5; // Adjust row height based on wrapped text
+      const cellHeight = wrappedText.length * fontHeight * 0.75; // Calculate height based on wrapped text
 
-    // Add a new page if necessary
-    if (y + fontHeight > pdf.internal.pageSize.getHeight() - margin) {
-      pdf.addPage();
-      y = margin;
+      // Draw background for the cell
+      pdf.rect(x, y, columnWidth, cellHeight, 'F');
+      pdf.text(wrappedText, x + 2, y + fontHeight - 2); // Add wrapped text
+
+      // Update max row height
+      maxRowHeight = Math.max(maxRowHeight, cellHeight);
+    });
+
+    y += maxRowHeight; // Move to the next row
+
+    // Check if a new page is needed
+    if (y + fontHeight > pageHeight - margin) {
+      pdf.addPage(); // Add a new page
+      y = margin; // Reset y position
+      renderHeaders(); // Render headers on the new page
     }
   });
 
