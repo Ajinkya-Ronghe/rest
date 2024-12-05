@@ -22,28 +22,26 @@ generatePDF(jsonData: any[]): void {
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
   const margin = 10;
-  const fontHeight = 8; // Base font height for row height calculation
+  const fontHeight = 8; // Adjusted for compact rows
   const columnWidth = (pageWidth - 2 * margin) / headers.length;
   let y = margin;
+
+  // Pre-calculate maximum header height
+  let headerMaxHeight = 0;
+  headers.forEach((header) => {
+    const wrappedHeaderText = pdf.splitTextToSize(header, columnWidth - 4);
+    const headerHeight = wrappedHeaderText.length * fontHeight * 1.1; // Adjust for wrapped text
+    headerMaxHeight = Math.max(headerMaxHeight, headerHeight);
+  });
 
   // Add dynamic title to the PDF
   pdf.setFontSize(14);
   pdf.setFont('helvetica', 'bold');
   pdf.text(title, pageWidth / 2, y, { align: 'center' });
-  y += fontHeight + 5;
+  y += fontHeight + 6;
 
-  // Function to render headers with consistent background color
+  // Function to render headers consistently
   const renderHeaders = () => {
-    let headerMaxHeight = 0;
-
-    // Calculate maximum height for the header row
-    headers.forEach((header) => {
-      const wrappedHeaderText = pdf.splitTextToSize(header, columnWidth - 4);
-      const headerHeight = wrappedHeaderText.length * fontHeight;
-      headerMaxHeight = Math.max(headerMaxHeight, headerHeight);
-    });
-
-    // Draw the background and render header text
     headers.forEach((header, index) => {
       const x = margin + index * columnWidth;
 
@@ -65,14 +63,14 @@ generatePDF(jsonData: any[]): void {
   // Render headers on the first page
   renderHeaders();
 
-  // Render rows with proper height calculation
+  // Render rows with adjusted spacing
   rows.forEach((row) => {
     let rowMaxHeight = 0;
 
-    // Calculate maximum height for the current row
+    // Calculate the maximum height for the current row
     row.forEach((cell, index) => {
       const wrappedText = pdf.splitTextToSize(cell?.toString(), columnWidth - 4);
-      const cellHeight = wrappedText.length * fontHeight; // No extra multiplier
+      const cellHeight = wrappedText.length * fontHeight * 1.1; // Adjust for wrapped text
       rowMaxHeight = Math.max(rowMaxHeight, cellHeight);
     });
 
@@ -95,7 +93,7 @@ generatePDF(jsonData: any[]): void {
     y += rowMaxHeight; // Move to the next row based on max height in the row
 
     // Check if a new page is needed
-    if (y + rowMaxHeight > pageHeight - margin) {
+    if (y + fontHeight > pageHeight - margin) {
       pdf.addPage(); // Add a new page
       y = margin; // Reset y position
       renderHeaders(); // Render headers on the new page
