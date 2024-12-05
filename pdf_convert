@@ -4,6 +4,10 @@ generatePDFFromJSON(jsonData: any[]): void {
     return;
   }
 
+  // Extract breadcrumb title from the HTML
+  const breadcrumbElement = document.querySelector('.breadcrumb span:nth-child(2)');
+  const title = breadcrumbElement?.textContent?.trim() || 'Exported Table'; // Default title if not found
+
   // Extract all unique keys as headers
   const headers = Array.from(
     new Set(jsonData.flatMap((row) => Object.keys(row)))
@@ -21,6 +25,12 @@ generatePDFFromJSON(jsonData: any[]): void {
   const fontHeight = 10;
   const columnWidth = (pageWidth - 2 * margin) / headers.length;
   let y = margin;
+
+  // Add dynamic title to the PDF
+  pdf.setFontSize(14);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text(title, pageWidth / 2, y, { align: 'center' });
+  y += fontHeight + 5;
 
   // Function to render headers
   const renderHeaders = () => {
@@ -76,5 +86,6 @@ generatePDFFromJSON(jsonData: any[]): void {
     }
   });
 
-  pdf.save('table.pdf');
+  // Save the PDF with the title as the file name
+  pdf.save(`${title}.pdf`);
 }
