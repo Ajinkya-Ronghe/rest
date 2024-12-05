@@ -1,11 +1,11 @@
-generatePDFFromJSON(jsonData: any[]): void {
+generatePDF(jsonData: any[]): void {
   if (!jsonData || jsonData.length === 0) {
     console.error('No data provided for the PDF');
     return;
   }
 
   // Extract breadcrumb title from the HTML
-  const breadcrumbElement = document.querySelector('.breadcrumb span:nth-child(2)');
+  const breadcrumbElement = document.querySelector('.breadcrumb span:nth-child(1)');
   const title = breadcrumbElement?.textContent?.trim() || 'Exported Table'; // Default title if not found
 
   // Extract all unique keys as headers
@@ -47,7 +47,7 @@ generatePDFFromJSON(jsonData: any[]): void {
       headerMaxHeight = Math.max(headerMaxHeight, headerHeight);
 
       // Draw full background for the header cell
-      pdf.setFillColor(230, 230, 230); // Light gray background
+      pdf.setFillColor(230, 230, 230); // Light gray background (same as header text background color)
       pdf.rect(x, y, columnWidth, headerHeight, 'F'); // Draw background
 
       // Add wrapped header text
