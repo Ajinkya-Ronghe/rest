@@ -32,28 +32,37 @@ generatePDFFromJSON(jsonData: any[]): void {
   pdf.text(title, pageWidth / 2, y, { align: 'center' });
   y += fontHeight + 5;
 
-  // Function to render headers
+  // Function to render headers with wrapped text
   const renderHeaders = () => {
+    let headerMaxHeight = fontHeight;
+
     headers.forEach((header, index) => {
       const x = margin + index * columnWidth;
+
+      // Wrap header text
+      const wrappedHeaderText = pdf.splitTextToSize(header, columnWidth - 4);
+      const headerHeight = wrappedHeaderText.length * fontHeight * 0.75;
+
+      // Adjust header row height dynamically
+      headerMaxHeight = Math.max(headerMaxHeight, headerHeight);
 
       // Header styles
       pdf.setFontSize(10);
       pdf.setFont('helvetica', 'bold');
       pdf.setTextColor(0, 0, 0); // Black text
       pdf.setFillColor(230, 230, 230); // Light gray background
-      pdf.rect(x, y, columnWidth, fontHeight, 'F'); // Draw background
-      pdf.text(header, x + 2, y + fontHeight - 2); // Add header text
+      pdf.rect(x, y, columnWidth, headerHeight, 'F'); // Draw background
+      pdf.text(wrappedHeaderText, x + 2, y + fontHeight - 2); // Add wrapped text
     });
-    y += fontHeight;
+    y += headerMaxHeight;
   };
 
   // Render headers on the first page
   renderHeaders();
 
-  // Render rows
+  // Render rows with adjusted spacing
   rows.forEach((row) => {
-    let maxRowHeight = fontHeight; // Initialize maximum row height
+    let rowMaxHeight = fontHeight; // Initialize maximum row height
 
     row.forEach((cell, index) => {
       const x = margin + index * columnWidth;
@@ -73,10 +82,10 @@ generatePDFFromJSON(jsonData: any[]): void {
       pdf.text(wrappedText, x + 2, y + fontHeight - 2); // Add wrapped text
 
       // Update max row height
-      maxRowHeight = Math.max(maxRowHeight, cellHeight);
+      rowMaxHeight = Math.max(rowMaxHeight, cellHeight);
     });
 
-    y += maxRowHeight; // Move to the next row
+    y += rowMaxHeight; // Move to the next row based on max height in the row
 
     // Check if a new page is needed
     if (y + fontHeight > pageHeight - margin) {
