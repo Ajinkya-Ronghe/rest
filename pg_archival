@@ -1,58 +1,40 @@
-Updated Function
-sql
-Copy code
 CREATE OR REPLACE FUNCTION archive_old_data(
     original_table_name TEXT,
     days_threshold INTEGER
 )
 RETURNS TEXT AS $$
 DECLARE
+    full_original_table TEXT;
+    full_backup_table TEXT;
     backup_table_name TEXT;
 BEGIN
-    -- Generate the backup table name
+    -- Generate the full table names with schema
+    full_original_table := 'esh_main.' || original_table_name;
     backup_table_name := original_table_name || '_bkp';
+    full_backup_table := 'esh_main.' || backup_table_name;
 
     -- Create the backup table if it doesn't exist
     EXECUTE format(
-        'CREATE TABLE IF NOT EXISTS %I (LIKE %I INCLUDING ALL)',
-        backup_table_name, original_table_name
+        'CREATE TABLE IF NOT EXISTS %I.%I (LIKE %I.%I INCLUDING ALL)',
+        'esh_main', backup_table_name, 'esh_main', original_table_name
     );
 
     -- Insert older data into the backup table
     EXECUTE format(
         'INSERT INTO %I SELECT * FROM %I WHERE created_at < NOW() - INTERVAL ''1 day'' * $1',
-        backup_table_name, original_table_name
+        full_backup_table, full_original_table
     )
     USING days_threshold;
 
     -- Delete the archived data from the original table
     EXECUTE format(
         'DELETE FROM %I WHERE created_at < NOW() - INTERVAL ''1 day'' * $1',
-        original_table_name
+        full_original_table
     )
     USING days_threshold;
 
     -- Return success message
     RETURN format('Archival Successful: Data older than %s days from %I moved to %I', 
-                  days_threshold, original_table_name, backup_table_name);
+                  days_threshold, full_original_table, full_backup_table);
 END;
 $$ LANGUAGE plpgsql;
-Explanation of Changes
-Return Type:
-
-Changed the function's return type from VOID to TEXT.
-Success Message:
-
-After completing the archival and deletion operations, the function constructs a success message using the format() function.
-The message includes the number of days, the original table name, and the backup table name for clarity.
-Test the Function
-Run the function as follows:
-
-sql
-Copy code
-SELECT archive_old_data('original_table', 30);
-Example Output:
-
-vbnet
-Copy code
-Archival Successful: Data older than 30 days from original_table moved to original_table_bkp
