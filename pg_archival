@@ -4,19 +4,23 @@ CREATE OR REPLACE FUNCTION archive_old_data(
 )
 RETURNS TEXT AS $$
 DECLARE
-    full_original_table TEXT;
     backup_table_name TEXT;
+    full_original_table TEXT;
     full_backup_table TEXT;
 BEGIN
-    -- Generate the full table names with schema
+    -- Generate full table names with schema
     full_original_table := 'esh_main.' || original_table_name;
     backup_table_name := original_table_name || '_bkp';
     full_backup_table := 'esh_main.' || backup_table_name;
 
     -- Create the backup table if it doesn't exist
     EXECUTE format(
-        'CREATE TABLE IF NOT EXISTS %I (LIKE %I INCLUDING ALL)',
-        full_backup_table, full_original_table
+        'DO $$ BEGIN
+            IF NOT EXISTS (SELECT FROM pg_tables WHERE schemaname = ''esh_main'' AND tablename = %L) THEN
+                CREATE TABLE %I (LIKE %I INCLUDING ALL);
+            END IF;
+        END $$;',
+        backup_table_name, full_backup_table, full_original_table
     );
 
     -- Insert older data into the backup table
@@ -34,7 +38,7 @@ BEGIN
     USING days_threshold;
 
     -- Return success message
-    RETURN format('Archival Successful: Data older than %s days from %I moved to %I', 
+    RETURN format('Archival Successful: Data older than %s days from %I moved to %I',
                   days_threshold, full_original_table, full_backup_table);
 END;
 $$ LANGUAGE plpgsql;
