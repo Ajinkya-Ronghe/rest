@@ -5,8 +5,8 @@ CREATE OR REPLACE FUNCTION archive_old_data(
 RETURNS TEXT AS $$
 DECLARE
     full_original_table TEXT;
-    full_backup_table TEXT;
     backup_table_name TEXT;
+    full_backup_table TEXT;
 BEGIN
     -- Generate the full table names with schema
     full_original_table := 'esh_main.' || original_table_name;
@@ -15,8 +15,8 @@ BEGIN
 
     -- Create the backup table if it doesn't exist
     EXECUTE format(
-        'CREATE TABLE IF NOT EXISTS %I.%I (LIKE %I.%I INCLUDING ALL)',
-        'esh_main', backup_table_name, 'esh_main', original_table_name
+        'CREATE TABLE IF NOT EXISTS %I (LIKE %I INCLUDING ALL)',
+        full_backup_table, full_original_table
     );
 
     -- Insert older data into the backup table
