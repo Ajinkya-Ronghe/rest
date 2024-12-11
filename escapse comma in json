@@ -1,44 +1,19 @@
-encloseValuesWithCommas(jsonObject: any): any {
-  const processValue = (value: any): any => {
+convertToCSV(data: any[]): string {
+  const header = Object.keys(data[0]).join(',');
+
+  // Escape commas and wrap fields with double quotes if they contain commas
+  const escapeCommas = (value: any): string => {
     if (typeof value === 'string' && value.includes(',')) {
       return `"${value}"`;
-    } else if (Array.isArray(value)) {
-      return value.map(item => processValue(item));
-    } else if (typeof value === 'object' && value !== null) {
-      return this.encloseValuesWithCommas(value); // Recursively process nested objects
     }
     return value;
   };
 
-  const result: any = {};
-  for (const key in jsonObject) {
-    if (jsonObject.hasOwnProperty(key)) {
-      result[key] = processValue(jsonObject[key]);
-    }
-  }
-  return result;
+  const rows = data.map(row => 
+    Object.values(row)
+      .map(escapeCommas) // Apply escaping logic to each value
+      .join(',')
+  );
+
+  return [header, ...rows].join('\n');
 }
-
-
-// Example usage
-const jsonData = [
-  { Name: "John, Doe", Age: 30, Address: "New York, NY" },
-  { Name: "Jane Smith", Age: 25, Address: "Los Angeles, CA" },
-];
-
-const csv = escapeCommasInCSV(jsonData);
-console.log(csv);
-
-
-// Example usage
-const jsonObject = {
-  name: "John, Doe",
-  address: {
-    city: "New York, NY",
-    zip: "10001"
-  },
-  hobbies: ["reading, writing", "coding"],
-};
-
-const escapedJson = escapeCommasInJsonValues(jsonObject);
-console.log(escapedJson);
