@@ -1,16 +1,24 @@
-function escapeCommasInCSV(data: any[]): string {
-  return data
-    .map((row) =>
-      Object.values(row)
-        .map((value) => {
-          const stringValue = String(value);
-          // If the value contains a comma, wrap it in double quotes
-          return stringValue.includes(",") ? `"${stringValue}"` : stringValue;
-        })
-        .join(",")
-    )
-    .join("\n");
+encloseValuesWithCommas(jsonObject: any): any {
+  const processValue = (value: any): any => {
+    if (typeof value === 'string' && value.includes(',')) {
+      return `"${value}"`;
+    } else if (Array.isArray(value)) {
+      return value.map(item => processValue(item));
+    } else if (typeof value === 'object' && value !== null) {
+      return this.encloseValuesWithCommas(value); // Recursively process nested objects
+    }
+    return value;
+  };
+
+  const result: any = {};
+  for (const key in jsonObject) {
+    if (jsonObject.hasOwnProperty(key)) {
+      result[key] = processValue(jsonObject[key]);
+    }
+  }
+  return result;
 }
+
 
 // Example usage
 const jsonData = [
