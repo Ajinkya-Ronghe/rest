@@ -1,24 +1,26 @@
-function escapeCommasInJsonValues(json: any): any {
-  // Recursively traverse the JSON object
-  const traverseAndReplace = (obj: any) => {
-    for (const key in obj) {
-      if (obj.hasOwnProperty(key)) {
-        if (typeof obj[key] === 'string') {
-          // Replace all commas with "\,"
-          obj[key] = obj[key].replace(/,/g, '\\,');
-        } else if (typeof obj[key] === 'object' && obj[key] !== null) {
-          // Recurse if the value is an object or array
-          traverseAndReplace(obj[key]);
-        }
-      }
-    }
-  };
-
-  // Create a deep copy to avoid mutating the original JSON
-  const jsonCopy = JSON.parse(JSON.stringify(json));
-  traverseAndReplace(jsonCopy);
-  return jsonCopy;
+function escapeCommasInCSV(data: any[]): string {
+  return data
+    .map((row) =>
+      Object.values(row)
+        .map((value) => {
+          const stringValue = String(value);
+          // If the value contains a comma, wrap it in double quotes
+          return stringValue.includes(",") ? `"${stringValue}"` : stringValue;
+        })
+        .join(",")
+    )
+    .join("\n");
 }
+
+// Example usage
+const jsonData = [
+  { Name: "John, Doe", Age: 30, Address: "New York, NY" },
+  { Name: "Jane Smith", Age: 25, Address: "Los Angeles, CA" },
+];
+
+const csv = escapeCommasInCSV(jsonData);
+console.log(csv);
+
 
 // Example usage
 const jsonObject = {
