@@ -13,15 +13,17 @@ BEGIN
     backup_table_name := original_table_name || '_bkp';
     full_backup_table := 'esh_main.' || backup_table_name;
 
-    -- Create the backup table if it doesn't exist
-    EXECUTE format(
-        'DO $$ BEGIN
-            IF NOT EXISTS (SELECT FROM pg_tables WHERE schemaname = ''esh_main'' AND tablename = %L) THEN
-                CREATE TABLE %I (LIKE %I INCLUDING ALL);
-            END IF;
-        END $$;',
-        backup_table_name, full_backup_table, full_original_table
-    );
+    -- Check and create backup table if it doesn't exist
+    IF NOT EXISTS (
+        SELECT FROM pg_tables 
+        WHERE schemaname = 'esh_main' 
+        AND tablename = backup_table_name
+    ) THEN
+        EXECUTE format(
+            'CREATE TABLE %I (LIKE %I INCLUDING ALL)',
+            full_backup_table, full_original_table
+        );
+    END IF;
 
     -- Insert older data into the backup table
     EXECUTE format(
@@ -38,7 +40,7 @@ BEGIN
     USING days_threshold;
 
     -- Return success message
-    RETURN format('Archival Successful: Data older than %s days from %I moved to %I',
+    RETURN format('Archival Successful: Data older than %s days from %I moved to %I', 
                   days_threshold, full_original_table, full_backup_table);
 END;
 $$ LANGUAGE plpgsql;
