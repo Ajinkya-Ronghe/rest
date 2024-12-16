@@ -14,18 +14,23 @@ generatePDF(jsonData: any[]): void {
     return;
   }
 
-  // Locate the first "mat-table" or fallback to ".table-wrapper"
-  let tableWrapper = titleElement.parentElement?.querySelector('mat-table');
-  if (!tableWrapper) {
-    tableWrapper = titleElement.parentElement?.querySelector('.table-wrapper');
+  // Locate the first table-wrapper or mat-table after the title
+  let tableWrapper: HTMLElement | null = null;
+
+  // Traverse the sibling and child nodes to find the closest table
+  let currentElement: HTMLElement | null = titleElement.parentElement;
+  while (currentElement) {
+    tableWrapper = currentElement.querySelector('mat-table, .table-wrapper');
+    if (tableWrapper) break;
+    currentElement = currentElement.parentElement;
   }
 
   if (!tableWrapper) {
-    console.error('No mat-table or table-wrapper found after the matching title');
+    console.error('No table-wrapper or mat-table found near the title');
     return;
   }
 
-  // Extract headers and keys
+  // Extract headers and keys from the table
   const columns = Array.from(tableWrapper.querySelectorAll('mat-header-cell')).map((cell) => ({
     jsonKey: cell.getAttribute('matColumnDef') || '',
     header: cell.textContent?.trim() || '',
@@ -36,6 +41,7 @@ generatePDF(jsonData: any[]): void {
     return;
   }
 
+  // PDF Configuration
   const pdf = new jsPDF();
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
@@ -50,19 +56,19 @@ generatePDF(jsonData: any[]): void {
   pdf.text(this.data.title, pageWidth / 2, y, { align: 'center' });
   y += fontHeight * 2;
 
-  // Pre-calculate header height
-  let headerMaxHeight = 0;
-  columns.forEach((col) => {
-    const wrappedHeaderText = pdf.splitTextToSize(col.header, columnWidth - 4);
-    const headerHeight = wrappedHeaderText.length * fontHeight * 1.3;
-    headerMaxHeight = Math.max(headerMaxHeight, headerHeight);
-  });
-
   // Render Headers
   const renderHeaders = () => {
+    let headerMaxHeight = 0;
+
+    columns.forEach((col) => {
+      const wrappedHeaderText = pdf.splitTextToSize(col.header, columnWidth - 4);
+      const headerHeight = wrappedHeaderText.length * fontHeight * 1.3;
+      headerMaxHeight = Math.max(headerMaxHeight, headerHeight);
+    });
+
     columns.forEach((col, index) => {
       const x = margin + index * columnWidth;
-      pdf.setFillColor(200, 200, 200); // Light gray background for header row
+      pdf.setFillColor(200, 200, 200); // Light gray background
       pdf.rect(x, y, columnWidth, headerMaxHeight, 'F');
 
       const wrappedHeaderText = pdf.splitTextToSize(col.header, columnWidth - 4);
@@ -71,6 +77,7 @@ generatePDF(jsonData: any[]): void {
       pdf.setTextColor(0, 0, 0);
       pdf.text(wrappedHeaderText, x + 2, y + fontHeight, { baseline: 'top' });
     });
+
     y += headerMaxHeight;
   };
 
