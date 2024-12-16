@@ -4,52 +4,54 @@ CREATE OR REPLACE FUNCTION archive_old_data(
 )
 RETURNS TEXT AS $$
 DECLARE
-    backup_table_name TEXT;
     full_original_table TEXT;
-    full_backup_table TEXT;
-    table_exists BOOLEAN;
+    partition_table_name TEXT;
+    archive_date DATE;
+    start_date TEXT;
+    end_date TEXT;
 BEGIN
-    -- Generate full table names with schema
+    -- Generate full original table name with schema
     full_original_table := 'esh_main.' || original_table_name;
-    backup_table_name := original_table_name || '_bkp';
-    full_backup_table := 'esh_main.' || backup_table_name;
 
-    -- Check if the backup table exists
-    SELECT EXISTS (
-        SELECT FROM pg_tables 
-        WHERE schemaname = 'esh_main' 
-        AND tablename = backup_table_name
-    ) INTO table_exists;
+    -- Calculate the archival date range
+    archive_date := NOW() - INTERVAL '1 day' * days_threshold;
+    start_date := archive_date::TEXT;
+    end_date := (archive_date + INTERVAL '1 day')::TEXT;
 
-    -- Create the backup table if it doesn't exist
-    IF NOT table_exists THEN
-        RAISE NOTICE 'Creating backup table: %', full_backup_table;
+    -- Generate partition table name with date extension
+    partition_table_name := format('esh_main.%s_%s', original_table_name, to_char(archive_date, 'YYYYMMDD'));
+
+    -- Step 1: Create the partition table if it doesn't exist
+    PERFORM 1
+    FROM pg_tables
+    WHERE schemaname = 'esh_main' AND tablename = format('%s_%s', original_table_name, to_char(archive_date, 'YYYYMMDD'));
+
+    IF NOT FOUND THEN
+        RAISE NOTICE 'Creating partition table: %', partition_table_name;
         EXECUTE format(
-            'CREATE TABLE %I (LIKE %I INCLUDING ALL)',
-            full_backup_table, full_original_table
+            'CREATE TABLE %I PARTITION OF %I FOR VALUES FROM (%L) TO (%L)',
+            partition_table_name, full_original_table, start_date, end_date
         );
     ELSE
-        RAISE NOTICE 'Backup table already exists: %', full_backup_table;
+        RAISE NOTICE 'Partition table already exists: %', partition_table_name;
     END IF;
 
-    -- Insert older data into the backup table
-    RAISE NOTICE 'Inserting data into backup table: %', full_backup_table;
+    -- Step 2: Move data into the partition table
+    RAISE NOTICE 'Moving data to partition table: %', partition_table_name;
     EXECUTE format(
-        'INSERT INTO %I SELECT * FROM %I WHERE created_at < NOW() - INTERVAL ''1 day'' * $1',
-        full_backup_table, full_original_table
-    )
-    USING days_threshold;
+        'INSERT INTO %I SELECT * FROM %I WHERE created_at >= %L AND created_at < %L',
+        partition_table_name, full_original_table, start_date, end_date
+    );
 
-    -- Delete the archived data from the original table
+    -- Step 3: Delete the archived data from the original table
     RAISE NOTICE 'Deleting data from original table: %', full_original_table;
     EXECUTE format(
-        'DELETE FROM %I WHERE created_at < NOW() - INTERVAL ''1 day'' * $1',
-        full_original_table
-    )
-    USING days_threshold;
+        'DELETE FROM %I WHERE created_at >= %L AND created_at < %L',
+        full_original_table, start_date, end_date
+    );
 
     -- Return success message
-    RETURN format('Archival Successful: Data older than %s days from %I moved to %I', 
-                  days_threshold, full_original_table, full_backup_table);
+    RETURN format('Archival Successful: Data from %I moved to partition %I for date %s',
+                  full_original_table, partition_table_name, archive_date);
 END;
 $$ LANGUAGE plpgsql;
