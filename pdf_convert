@@ -4,7 +4,7 @@ generatePDF(jsonData: any[]): void {
     return;
   }
 
-  // Dynamically find the <h1> with matching title
+  // Find the <h1> element with matching title
   const titleElement = Array.from(document.querySelectorAll('h1')).find(
     (el) => el.textContent?.trim() === this.data.title
   );
@@ -14,21 +14,25 @@ generatePDF(jsonData: any[]): void {
     return;
   }
 
-  // Find the first mat-table after the matched title
-  const matTable = titleElement.parentElement?.querySelector('mat-table');
-  if (!matTable) {
-    console.error('No mat-table found after the matching title');
+  // Locate the first "mat-table" or fallback to ".table-wrapper"
+  let tableWrapper = titleElement.parentElement?.querySelector('mat-table');
+  if (!tableWrapper) {
+    tableWrapper = titleElement.parentElement?.querySelector('.table-wrapper');
+  }
+
+  if (!tableWrapper) {
+    console.error('No mat-table or table-wrapper found after the matching title');
     return;
   }
 
-  // Extract headers and keys from mat-header-cell
-  const columns = Array.from(matTable.querySelectorAll('mat-header-cell')).map((cell) => ({
+  // Extract headers and keys
+  const columns = Array.from(tableWrapper.querySelectorAll('mat-header-cell')).map((cell) => ({
     jsonKey: cell.getAttribute('matColumnDef') || '',
     header: cell.textContent?.trim() || '',
   }));
 
   if (columns.length === 0) {
-    console.error('No columns found in the mat-table');
+    console.error('No columns found in the table');
     return;
   }
 
@@ -40,7 +44,7 @@ generatePDF(jsonData: any[]): void {
   const columnWidth = (pageWidth - 2 * margin) / columns.length;
   let y = margin;
 
-  // Add dynamic title
+  // Add Title at the top
   pdf.setFontSize(14);
   pdf.setFont('helvetica', 'bold');
   pdf.text(this.data.title, pageWidth / 2, y, { align: 'center' });
@@ -58,7 +62,7 @@ generatePDF(jsonData: any[]): void {
   const renderHeaders = () => {
     columns.forEach((col, index) => {
       const x = margin + index * columnWidth;
-      pdf.setFillColor(200, 200, 200); // Light gray background
+      pdf.setFillColor(200, 200, 200); // Light gray background for header row
       pdf.rect(x, y, columnWidth, headerMaxHeight, 'F');
 
       const wrappedHeaderText = pdf.splitTextToSize(col.header, columnWidth - 4);
@@ -102,6 +106,6 @@ generatePDF(jsonData: any[]): void {
     }
   });
 
-  // Save the PDF using the title as the filename
+  // Save the PDF with the title as filename
   pdf.save(`${this.data.title}.pdf`);
 }
