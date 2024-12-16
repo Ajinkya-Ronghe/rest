@@ -4,7 +4,6 @@ generatePDF(jsonData: any[]): void {
     return;
   }
 
-  // Identify the target table based on `this.data.title`
   const tableTitleElement = Array.from(document.querySelectorAll('.tableTitle')).find(
     (el) => el.textContent?.trim() === this.data.title
   );
@@ -14,19 +13,18 @@ generatePDF(jsonData: any[]): void {
     return;
   }
 
-  // Extract mappings of JSON keys to table headers
   const table = tableTitleElement.closest('.table-wrapper');
   if (!table) {
     console.error('Table wrapper not found for the matching title');
     return;
   }
 
+  // Extract JSON key to Header mappings
   const columns = Array.from(table.querySelectorAll('mat-header-cell')).map((cell) => ({
-    jsonKey: cell.getAttribute('matColumnDef'),
-    header: cell.textContent?.trim(),
+    jsonKey: cell.getAttribute('matColumnDef') || '', // Default fallback for safety
+    header: cell.textContent?.trim() || '', // Ensure it's never undefined
   }));
 
-  // Ensure valid columns are found
   if (columns.length === 0) {
     console.error('No columns found in the table');
     return;
@@ -36,82 +34,65 @@ generatePDF(jsonData: any[]): void {
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
   const margin = 10;
-  const fontHeight = 4; // Adjusted for compact rows and headers
+  const fontHeight = 4;
   const columnWidth = (pageWidth - 2 * margin) / columns.length;
   let y = margin;
 
-  // Add dynamic title to the PDF
-  pdf.setFontSize(14);
-  pdf.setFont('helvetica', 'bold');
-  pdf.text(this.data.title, pageWidth / 2, y, { align: 'center' });
-  y += fontHeight * 2; // Extra spacing after title
-
-  // Pre-calculate maximum header height
+  // Pre-calculate header height
   let headerMaxHeight = 0;
-  const headers = columns.map((col) => col.header);
-  headers.forEach((header) => {
-    const wrappedHeaderText = pdf.splitTextToSize(header, columnWidth - 4);
-    const headerHeight = wrappedHeaderText.length * fontHeight * 1.3; // Adjusted multiplier
+  columns.forEach((col) => {
+    const wrappedHeaderText = pdf.splitTextToSize(col.header, columnWidth - 4);
+    const headerHeight = wrappedHeaderText.length * fontHeight * 1.3;
     headerMaxHeight = Math.max(headerMaxHeight, headerHeight);
   });
 
-  // Render headers
+  // Render Headers
   const renderHeaders = () => {
     columns.forEach((col, index) => {
       const x = margin + index * columnWidth;
+      pdf.setFillColor(200, 200, 200); // Gray background
+      pdf.rect(x, y, columnWidth, headerMaxHeight, 'F');
 
-      // Draw full background for the header cell
-      pdf.setFillColor(200, 200, 200); // Light gray background
-      pdf.rect(x, y, columnWidth, headerMaxHeight, 'F'); // Full background
-
-      // Add wrapped header text
       const wrappedHeaderText = pdf.splitTextToSize(col.header, columnWidth - 4);
       pdf.setFontSize(10);
       pdf.setFont('helvetica', 'bold');
-      pdf.setTextColor(0, 0, 0); // Black text
-      pdf.text(wrappedHeaderText, x + 2, y + fontHeight, { baseline: 'top' }); // Align text properly
+      pdf.setTextColor(0, 0, 0);
+      pdf.text(wrappedHeaderText, x + 2, y + fontHeight, { baseline: 'top' });
     });
-
-    y += headerMaxHeight; // Adjust y position after header
+    y += headerMaxHeight;
   };
 
-  // Render headers on the first page
   renderHeaders();
 
-  // Render rows
+  // Render Rows
   jsonData.forEach((row) => {
     let rowMaxHeight = 0;
 
     columns.forEach((col, index) => {
       const x = margin + index * columnWidth;
-      const cellValue = row[col.jsonKey] !== undefined ? row[col.jsonKey].toString() : '';
-
-      // Split text to fit within the column
+      const cellValue = row[col.jsonKey] !== undefined ? row[col.jsonKey].toString() : ''; // Safely access JSON
       const wrappedText = pdf.splitTextToSize(cellValue, columnWidth - 4);
-      const cellHeight = wrappedText.length * fontHeight * 1.3; // Adjusted multiplier
+      const cellHeight = wrappedText.length * fontHeight * 1.3;
+
       rowMaxHeight = Math.max(rowMaxHeight, cellHeight);
 
-      // Draw full background for the cell
-      pdf.setFillColor(255, 255, 255); // White background
-      pdf.rect(x, y, columnWidth, cellHeight, 'F'); // Full background
-
-      // Add wrapped cell text
+      pdf.setFillColor(255, 255, 255);
+      pdf.rect(x, y, columnWidth, cellHeight, 'F');
       pdf.setFontSize(9);
       pdf.setFont('helvetica', 'normal');
-      pdf.setTextColor(0, 0, 0); // Black text
-      pdf.text(wrappedText, x + 2, y + fontHeight, { baseline: 'top' }); // Align text properly
+      pdf.setTextColor(0, 0, 0);
+      pdf.text(wrappedText, x + 2, y + fontHeight, { baseline: 'top' });
     });
 
-    y += rowMaxHeight; // Move to the next row based on max height in the row
+    y += rowMaxHeight;
 
-    // Check if a new page is needed
+    // Add new page if required
     if (y + fontHeight > pageHeight - margin) {
-      pdf.addPage(); // Add a new page
-      y = margin; // Reset y position
-      renderHeaders(); // Render headers on the new page
+      pdf.addPage();
+      y = margin;
+      renderHeaders();
     }
   });
 
-  // Save the PDF with the title as the file name
   pdf.save(`${this.data.title}.pdf`);
 }
