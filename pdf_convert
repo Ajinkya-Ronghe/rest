@@ -4,7 +4,7 @@ generatePDF(jsonData: any[]): void {
     return;
   }
 
-  // Locate the title element using <h1>
+  // Dynamically find <h1> with matching title
   const titleElement = Array.from(document.querySelectorAll('h1')).find(
     (el) => el.textContent?.trim() === this.data.title
   );
@@ -14,14 +14,15 @@ generatePDF(jsonData: any[]): void {
     return;
   }
 
-  // Locate the table wrapper from the title element
-  const tableWrapper = titleElement.closest('.patch-sec-level')?.querySelector('.table-wrapper');
+  // Traverse up to locate the closest container and find the table
+  const tableWrapper = titleElement.closest('div')?.querySelector('.table-wrapper');
+
   if (!tableWrapper) {
     console.error('Table wrapper not found for the matching title');
     return;
   }
 
-  // Extract JSON key to Header mappings
+  // Extract headers and keys from mat-header-cell
   const columns = Array.from(tableWrapper.querySelectorAll('mat-header-cell')).map((cell) => ({
     jsonKey: cell.getAttribute('matColumnDef') || '',
     header: cell.textContent?.trim() || '',
@@ -40,13 +41,13 @@ generatePDF(jsonData: any[]): void {
   const columnWidth = (pageWidth - 2 * margin) / columns.length;
   let y = margin;
 
-  // Add dynamic title to the PDF
+  // Add dynamic title
   pdf.setFontSize(14);
   pdf.setFont('helvetica', 'bold');
   pdf.text(this.data.title, pageWidth / 2, y, { align: 'center' });
   y += fontHeight * 2;
 
-  // Pre-calculate header height
+  // Render Headers
   let headerMaxHeight = 0;
   columns.forEach((col) => {
     const wrappedHeaderText = pdf.splitTextToSize(col.header, columnWidth - 4);
@@ -54,11 +55,10 @@ generatePDF(jsonData: any[]): void {
     headerMaxHeight = Math.max(headerMaxHeight, headerHeight);
   });
 
-  // Render Headers
   const renderHeaders = () => {
     columns.forEach((col, index) => {
       const x = margin + index * columnWidth;
-      pdf.setFillColor(200, 200, 200); // Light gray background
+      pdf.setFillColor(200, 200, 200); // Gray background
       pdf.rect(x, y, columnWidth, headerMaxHeight, 'F');
 
       const wrappedHeaderText = pdf.splitTextToSize(col.header, columnWidth - 4);
@@ -102,5 +102,6 @@ generatePDF(jsonData: any[]): void {
     }
   });
 
+  // Save the PDF using the title as the filename
   pdf.save(`${this.data.title}.pdf`);
 }
