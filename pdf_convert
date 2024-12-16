@@ -4,21 +4,20 @@ generatePDF(jsonData: any[]): void {
     return;
   }
 
-  // Dynamically find <h1> with matching title
+  // Dynamically find the <h1> with matching title
   const titleElement = Array.from(document.querySelectorAll('h1')).find(
     (el) => el.textContent?.trim() === this.data.title
   );
 
   if (!titleElement) {
-    console.error(`Table with the matching title '${this.data.title}' not found`);
+    console.error(`Title '${this.data.title}' not found in the document`);
     return;
   }
 
-  // Traverse up to locate the closest container and find the table
-  const tableWrapper = titleElement.closest('div')?.querySelector('.table-wrapper');
-
+  // Find the first table-wrapper after the matched title
+  const tableWrapper = titleElement.parentElement?.querySelector('.table-wrapper');
   if (!tableWrapper) {
-    console.error('Table wrapper not found for the matching title');
+    console.error('No table-wrapper found after the matching title');
     return;
   }
 
@@ -29,7 +28,7 @@ generatePDF(jsonData: any[]): void {
   }));
 
   if (columns.length === 0) {
-    console.error('No columns found in the table');
+    console.error('No columns found in the table-wrapper');
     return;
   }
 
@@ -47,7 +46,7 @@ generatePDF(jsonData: any[]): void {
   pdf.text(this.data.title, pageWidth / 2, y, { align: 'center' });
   y += fontHeight * 2;
 
-  // Render Headers
+  // Pre-calculate header height
   let headerMaxHeight = 0;
   columns.forEach((col) => {
     const wrappedHeaderText = pdf.splitTextToSize(col.header, columnWidth - 4);
@@ -55,10 +54,11 @@ generatePDF(jsonData: any[]): void {
     headerMaxHeight = Math.max(headerMaxHeight, headerHeight);
   });
 
+  // Render Headers
   const renderHeaders = () => {
     columns.forEach((col, index) => {
       const x = margin + index * columnWidth;
-      pdf.setFillColor(200, 200, 200); // Gray background
+      pdf.setFillColor(200, 200, 200); // Light gray background
       pdf.rect(x, y, columnWidth, headerMaxHeight, 'F');
 
       const wrappedHeaderText = pdf.splitTextToSize(col.header, columnWidth - 4);
@@ -94,7 +94,7 @@ generatePDF(jsonData: any[]): void {
 
     y += rowMaxHeight;
 
-    // Add new page if required
+    // Add a new page if required
     if (y + fontHeight > pageHeight - margin) {
       pdf.addPage();
       y = margin;
