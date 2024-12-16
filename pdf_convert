@@ -4,8 +4,8 @@ generatePDF(jsonData: any[]): void {
     return;
   }
 
-  // Locate the title element using <h1> with class 'header'
-  const titleElement = Array.from(document.querySelectorAll('h1.header')).find(
+  // Locate the title element using <h1>
+  const titleElement = Array.from(document.querySelectorAll('h1')).find(
     (el) => el.textContent?.trim() === this.data.title
   );
 
@@ -40,7 +40,7 @@ generatePDF(jsonData: any[]): void {
   const columnWidth = (pageWidth - 2 * margin) / columns.length;
   let y = margin;
 
-  // Add dynamic title
+  // Add dynamic title to the PDF
   pdf.setFontSize(14);
   pdf.setFont('helvetica', 'bold');
   pdf.text(this.data.title, pageWidth / 2, y, { align: 'center' });
