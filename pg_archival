@@ -42,8 +42,12 @@ BEGIN
 
     -- Step 4: Create partitions dynamically for every 90-day range
     start_date := min_date;
-    WHILE start_date < max_date LOOP
+    WHILE start_date <= max_date LOOP
         end_date := start_date + INTERVAL '90 days';
+        IF end_date > max_date THEN
+            end_date := max_date + INTERVAL '1 day'; -- Include all remaining data
+        END IF;
+
         partition_name := 'esh_main.' || partitioned_table || '_' || to_char(start_date, 'YYYYMMDD');
 
         EXECUTE format('CREATE TABLE %I PARTITION OF esh_main.%I
