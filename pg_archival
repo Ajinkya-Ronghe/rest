@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION convert_to_partitioned_table(
+CREATE OR REPLACE FUNCTION esh_main.convert_to_partitioned_table(
     source_table TEXT,      -- Name of the existing table
     partition_column TEXT   -- The column used for partitioning (must be of DATE type)
 )
@@ -31,8 +31,8 @@ BEGIN
 
     -- Step 3: Create a new partitioned table
     partitioned_table := source_table || '_partitioned';
-    EXECUTE format('CREATE TABLE %I (
-                        id SERIAL PRIMARY KEY, 
+    EXECUTE format('CREATE TABLE esh_main.%I (
+                        id SERIAL,
                         %I DATE NOT NULL,
                         CONSTRAINT %I_pkey PRIMARY KEY (id, %I)
                     ) PARTITION BY RANGE (%I);',
@@ -44,9 +44,9 @@ BEGIN
     start_date := min_date;
     WHILE start_date < max_date LOOP
         end_date := start_date + INTERVAL '90 days';
-        partition_name := partitioned_table || '_' || to_char(start_date, 'YYYYMMDD');
+        partition_name := 'esh_main.' || partitioned_table || '_' || to_char(start_date, 'YYYYMMDD');
 
-        EXECUTE format('CREATE TABLE %I PARTITION OF %I
+        EXECUTE format('CREATE TABLE %I PARTITION OF esh_main.%I
                         FOR VALUES FROM (%L) TO (%L);',
                         partition_name, partitioned_table, start_date, end_date);
 
@@ -55,27 +55,16 @@ BEGIN
     END LOOP;
 
     -- Step 5: Transfer data from the original table to the new partitioned table
-    EXECUTE format('INSERT INTO %I (id, %I) SELECT id, %I FROM %I;',
+    EXECUTE format('INSERT INTO esh_main.%I (id, %I) SELECT id, %I FROM %I;',
                     partitioned_table, partition_column, partition_column, source_table);
 
     RAISE NOTICE 'Data transferred successfully to the partitioned table.';
 
     -- Step 6: Drop the original table and rename the partitioned table (optional)
     EXECUTE format('DROP TABLE %I;', source_table);
-    EXECUTE format('ALTER TABLE %I RENAME TO %I;', partitioned_table, source_table);
+    EXECUTE format('ALTER TABLE esh_main.%I RENAME TO %I;', partitioned_table, source_table);
 
     RAISE NOTICE 'Table % has been converted to a partitioned table.', source_table;
 
 END;
 $$ LANGUAGE plpgsql;
-
-
-
-
-
-
-
-
-
-
-SELECT convert_to_partitioned_table('test_ceh_tn_tanium_core_and_patch_health', 'created_time');
