@@ -33,8 +33,16 @@ BEGIN
         RAISE EXCEPTION 'Failed to retrieve columns for table %', source_table;
     END IF;
 
-    -- Step 3: Determine min and max values of the partition column
-    EXECUTE format('SELECT MIN(%I), MAX(%I) FROM %I', partition_column, partition_column, source_table)
+    -- Step 3: Deduplicate the original table
+    EXECUTE format('CREATE TABLE temp_deduplicated AS
+                    SELECT DISTINCT ON (%I) %s
+                    FROM %I
+                    ORDER BY %I, ctid;', partition_column, column_list, source_table, partition_column);
+
+    RAISE NOTICE 'Duplicates removed and temporary table created.';
+
+    -- Step 4: Determine min and max values of the partition column
+    EXECUTE format('SELECT MIN(%I), MAX(%I) FROM temp_deduplicated', partition_column, partition_column)
     INTO min_date, max_date;
 
     IF min_date IS NULL OR max_date IS NULL THEN
@@ -42,7 +50,7 @@ BEGIN
         RETURN;
     END IF;
 
-    -- Step 4: Create a new partitioned table with dynamic column definitions
+    -- Step 5: Create a new partitioned table with dynamic column definitions
     partitioned_table := source_table || '_partitioned';
     EXECUTE format('CREATE TABLE esh_main.%I (
                         %s,
@@ -52,7 +60,7 @@ BEGIN
 
     RAISE NOTICE 'Created partitioned table: %', partitioned_table;
 
-    -- Step 5: Create partitions dynamically for every 90-day range
+    -- Step 6: Create partitions dynamically for every 90-day range
     start_date := min_date;
     WHILE start_date <= max_date LOOP
         end_date := start_date + INTERVAL '90 days';
@@ -70,14 +78,17 @@ BEGIN
         start_date := end_date;
     END LOOP;
 
-    -- Step 6: Transfer data from the original table to the new partitioned table
-    EXECUTE format('INSERT INTO esh_main.%I (%s) SELECT %s FROM %I;',
-                    partitioned_table, column_list, column_list, source_table);
+    -- Step 7: Transfer deduplicated data into the new partitioned table
+    EXECUTE format('INSERT INTO esh_main.%I (%s) SELECT %s FROM temp_deduplicated;',
+                    partitioned_table, column_list, column_list);
 
     RAISE NOTICE 'Data transferred successfully to the partitioned table.';
 
-    -- Step 7: Drop the original table and rename the partitioned table (optional)
+    -- Step 8: Drop the temporary deduplicated table and original table
     EXECUTE format('DROP TABLE %I;', source_table);
+    EXECUTE format('DROP TABLE temp_deduplicated;');
+
+    -- Step 9: Rename the partitioned table to the original table name
     EXECUTE format('ALTER TABLE esh_main.%I RENAME TO %I;', partitioned_table, source_table);
 
     RAISE NOTICE 'Table % has been converted to a partitioned table.', source_table;
