@@ -1,57 +1,40 @@
-CREATE OR REPLACE FUNCTION archive_old_data(
-    original_table_name TEXT,
-    days_threshold INTEGER
-)
-RETURNS TEXT AS $$
+DO $$
 DECLARE
-    full_original_table TEXT;
-    partition_table_name TEXT;
-    archive_date DATE;
-    start_date TEXT;
-    end_date TEXT;
+    start_date DATE;
+    end_date DATE;
+    partition_name TEXT;
+    existing_table TEXT := 'your_existing_table'; -- PUT YOUR EXISTING TABLE NAME HERE
 BEGIN
-    -- Generate full original table name with schema
-    full_original_table := 'esh_main.' || original_table_name;
+    -- Step 1: Create the Partitioned Table
+    EXECUTE format('CREATE TABLE %I_partitioned (
+                    id SERIAL PRIMARY KEY,
+                    created_date DATE NOT NULL,
+                    data TEXT
+                ) PARTITION BY RANGE (created_date);',
+                existing_table);
 
-    -- Calculate the archival date range
-    archive_date := NOW() - INTERVAL '1 day' * days_threshold;
-    start_date := archive_date::TEXT;
-    end_date := (archive_date + INTERVAL '1 day')::TEXT;
+    -- Step 2: Determine Min and Max Dates in the Existing Table
+    EXECUTE format('SELECT MIN(created_date), MAX(created_date) FROM %I', existing_table)
+    INTO start_date, end_date;
 
-    -- Generate partition table name with date extension
-    partition_table_name := format('esh_main.%s_%s', original_table_name, to_char(archive_date, 'YYYYMMDD'));
+    -- Step 3: Create Partitions for Every 90 Days
+    WHILE start_date < end_date LOOP
+        partition_name := format('%s_partition_%s', existing_table, TO_CHAR(start_date, 'YYYY_MM_DD'));
+        EXECUTE format('CREATE TABLE %I PARTITION OF %I_partitioned
+                        FOR VALUES FROM (%L) TO (%L)',
+                        partition_name, existing_table || '_partitioned', start_date, start_date + INTERVAL '90 days');
+        start_date := start_date + INTERVAL '90 days';
+    END LOOP;
 
-    -- Step 1: Create the partition table if it doesn't exist
-    PERFORM 1
-    FROM pg_tables
-    WHERE schemaname = 'esh_main' AND tablename = format('%s_%s', original_table_name, to_char(archive_date, 'YYYYMMDD'));
+    -- Step 4: Transfer Data to the Partitioned Table
+    EXECUTE format('INSERT INTO %I_partitioned (id, created_date, data)
+                    SELECT id, created_date, data FROM %I',
+                    existing_table, existing_table);
 
-    IF NOT FOUND THEN
-        RAISE NOTICE 'Creating partition table: %', partition_table_name;
-        EXECUTE format(
-            'CREATE TABLE %I PARTITION OF %I FOR VALUES FROM (%L) TO (%L)',
-            partition_table_name, full_original_table, start_date, end_date
-        );
-    ELSE
-        RAISE NOTICE 'Partition table already exists: %', partition_table_name;
-    END IF;
+    -- Step 5: Drop the Old Table (Optional)
+    EXECUTE format('DROP TABLE %I', existing_table);
 
-    -- Step 2: Move data into the partition table
-    RAISE NOTICE 'Moving data to partition table: %', partition_table_name;
-    EXECUTE format(
-        'INSERT INTO %I SELECT * FROM %I WHERE created_at >= %L AND created_at < %L',
-        partition_table_name, full_original_table, start_date, end_date
-    );
+    -- Step 6: Rename the Partitioned Table to the Original Table Name
+    EXECUTE format('ALTER TABLE %I_partitioned RENAME TO %I', existing_table, existing_table);
 
-    -- Step 3: Delete the archived data from the original table
-    RAISE NOTICE 'Deleting data from original table: %', full_original_table;
-    EXECUTE format(
-        'DELETE FROM %I WHERE created_at >= %L AND created_at < %L',
-        full_original_table, start_date, end_date
-    );
-
-    -- Return success message
-    RETURN format('Archival Successful: Data from %I moved to partition %I for date %s',
-                  full_original_table, partition_table_name, archive_date);
-END;
-$$ LANGUAGE plpgsql;
+END $$;
