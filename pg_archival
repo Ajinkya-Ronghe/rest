@@ -1,40 +1,81 @@
-DO $$
+CREATE OR REPLACE FUNCTION convert_to_partitioned_table(
+    source_table TEXT,      -- Name of the existing table
+    partition_column TEXT   -- The column used for partitioning (must be of DATE type)
+)
+RETURNS void AS $$
 DECLARE
+    min_date DATE;
+    max_date DATE;
+    partition_name TEXT;
     start_date DATE;
     end_date DATE;
-    partition_name TEXT;
-    existing_table TEXT := 'your_existing_table'; -- PUT YOUR EXISTING TABLE NAME HERE
+    partitioned_table TEXT;
 BEGIN
-    -- Step 1: Create the Partitioned Table
-    EXECUTE format('CREATE TABLE %I_partitioned (
-                    id SERIAL PRIMARY KEY,
-                    created_date DATE NOT NULL,
-                    data TEXT
-                ) PARTITION BY RANGE (created_date);',
-                existing_table);
+    -- Step 1: Validate if the partition column exists
+    PERFORM 1
+    FROM information_schema.columns
+    WHERE table_name = source_table AND column_name = partition_column;
 
-    -- Step 2: Determine Min and Max Dates in the Existing Table
-    EXECUTE format('SELECT MIN(created_date), MAX(created_date) FROM %I', existing_table)
-    INTO start_date, end_date;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Column % does not exist in table %', partition_column, source_table;
+    END IF;
 
-    -- Step 3: Create Partitions for Every 90 Days
-    WHILE start_date < end_date LOOP
-        partition_name := format('%s_partition_%s', existing_table, TO_CHAR(start_date, 'YYYY_MM_DD'));
-        EXECUTE format('CREATE TABLE %I PARTITION OF %I_partitioned
-                        FOR VALUES FROM (%L) TO (%L)',
-                        partition_name, existing_table || '_partitioned', start_date, start_date + INTERVAL '90 days');
-        start_date := start_date + INTERVAL '90 days';
+    -- Step 2: Determine min and max values of the partition column
+    EXECUTE format('SELECT MIN(%I), MAX(%I) FROM %I', partition_column, partition_column, source_table)
+    INTO min_date, max_date;
+
+    IF min_date IS NULL OR max_date IS NULL THEN
+        RAISE NOTICE 'No data found in table %, nothing to partition.', source_table;
+        RETURN;
+    END IF;
+
+    -- Step 3: Create a new partitioned table
+    partitioned_table := source_table || '_partitioned';
+    EXECUTE format('CREATE TABLE %I (
+                        id SERIAL PRIMARY KEY, 
+                        %I DATE NOT NULL,
+                        CONSTRAINT %I_pkey PRIMARY KEY (id, %I)
+                    ) PARTITION BY RANGE (%I);',
+                    partitioned_table, partition_column, partitioned_table, partition_column, partition_column);
+
+    RAISE NOTICE 'Created partitioned table: %', partitioned_table;
+
+    -- Step 4: Create partitions dynamically for every 90-day range
+    start_date := min_date;
+    WHILE start_date < max_date LOOP
+        end_date := start_date + INTERVAL '90 days';
+        partition_name := partitioned_table || '_' || to_char(start_date, 'YYYYMMDD');
+
+        EXECUTE format('CREATE TABLE %I PARTITION OF %I
+                        FOR VALUES FROM (%L) TO (%L);',
+                        partition_name, partitioned_table, start_date, end_date);
+
+        RAISE NOTICE 'Created partition: %', partition_name;
+        start_date := end_date;
     END LOOP;
 
-    -- Step 4: Transfer Data to the Partitioned Table
-    EXECUTE format('INSERT INTO %I_partitioned (id, created_date, data)
-                    SELECT id, created_date, data FROM %I',
-                    existing_table, existing_table);
+    -- Step 5: Transfer data from the original table to the new partitioned table
+    EXECUTE format('INSERT INTO %I (id, %I) SELECT id, %I FROM %I;',
+                    partitioned_table, partition_column, partition_column, source_table);
 
-    -- Step 5: Drop the Old Table (Optional)
-    EXECUTE format('DROP TABLE %I', existing_table);
+    RAISE NOTICE 'Data transferred successfully to the partitioned table.';
 
-    -- Step 6: Rename the Partitioned Table to the Original Table Name
-    EXECUTE format('ALTER TABLE %I_partitioned RENAME TO %I', existing_table, existing_table);
+    -- Step 6: Drop the original table and rename the partitioned table (optional)
+    EXECUTE format('DROP TABLE %I;', source_table);
+    EXECUTE format('ALTER TABLE %I RENAME TO %I;', partitioned_table, source_table);
 
-END $$;
+    RAISE NOTICE 'Table % has been converted to a partitioned table.', source_table;
+
+END;
+$$ LANGUAGE plpgsql;
+
+
+
+
+
+
+
+
+
+
+SELECT convert_to_partitioned_table('test_ceh_tn_tanium_core_and_patch_health', 'created_time');
