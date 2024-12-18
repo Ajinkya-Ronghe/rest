@@ -1,32 +1,83 @@
-public static Map<String, Integer> sortAndTransformMap(Map<String, Integer> map, int topN) {
-        // Sort the entries by values in descending order
-        List<Map.Entry<String, Integer>> sortedEntries = map.entrySet().stream()
+import java.util.*;
+import java.util.stream.*;
+
+public class MapSorter {
+    public static void main(String[] args) {
+        // Example input object
+        List<Integer> values = Arrays.asList(100, 200, 50, 300, 250, 400, 150, 120);
+        List<String> labels = Arrays.asList("A", "B", "C", "D", "E", "F", "G", "H");
+        PatchInstallStatusSummary summary = new PatchInstallStatusSummary(values, labels);
+
+        // Process the object
+        PatchInstallStatusSummary processedSummary = processSummary(summary, 5);
+
+        // Print the result
+        for (int i = 0; i < processedSummary.getLabels().size(); i++) {
+            System.out.println(processedSummary.getLabels().get(i) + " -> " + processedSummary.getValues().get(i));
+        }
+    }
+
+    public static PatchInstallStatusSummary processSummary(PatchInstallStatusSummary summary, int topN) {
+        List<Integer> values = summary.getValues();
+        List<String> labels = summary.getLabels();
+
+        // Combine labels and values into a list of entries
+        List<Map.Entry<String, Integer>> entries = new ArrayList<>();
+        for (int i = 0; i < values.size(); i++) {
+            entries.add(new AbstractMap.SimpleEntry<>(labels.get(i), values.get(i)));
+        }
+
+        // Sort entries by value in descending order
+        List<Map.Entry<String, Integer>> sortedEntries = entries.stream()
                 .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
                 .collect(Collectors.toList());
 
-        // Take the top N entries
-        List<Map.Entry<String, Integer>> topEntries = sortedEntries.stream()
-                .limit(topN)
-                .collect(Collectors.toList());
+        // Separate top N entries and calculate "Others" sum
+        List<String> newLabels = new ArrayList<>();
+        List<Integer> newValues = new ArrayList<>();
+        int othersSum = 0;
 
-        // Calculate the sum of the remaining entries
-        int othersSum = sortedEntries.stream()
-                .skip(topN)
-                .mapToInt(Map.Entry::getValue)
-                .sum();
-
-        // Create a new map for the result
-        Map<String, Integer> result = new LinkedHashMap<>();
-
-        // Add the top N entries to the result map
-        for (Map.Entry<String, Integer> entry : topEntries) {
-            result.put(entry.getKey(), entry.getValue());
+        for (int i = 0; i < sortedEntries.size(); i++) {
+            if (i < topN) {
+                newLabels.add(sortedEntries.get(i).getKey());
+                newValues.add(sortedEntries.get(i).getValue());
+            } else {
+                othersSum += sortedEntries.get(i).getValue();
+            }
         }
 
-        // Add the "Others" entry if there are remaining entries
+        // Add "Others" if applicable
         if (othersSum > 0) {
-            result.put("Others", othersSum);
+            newLabels.add("Others");
+            newValues.add(othersSum);
         }
 
-        return result;
+        return new PatchInstallStatusSummary(newValues, newLabels);
     }
+}
+
+class PatchInstallStatusSummary {
+    private List<Integer> values;
+    private List<String> labels;
+
+    public PatchInstallStatusSummary(List<Integer> values, List<String> labels) {
+        this.values = values;
+        this.labels = labels;
+    }
+
+    public List<Integer> getValues() {
+        return values;
+    }
+
+    public void setValues(List<Integer> values) {
+        this.values = values;
+    }
+
+    public List<String> getLabels() {
+        return labels;
+    }
+
+    public void setLabels(List<String> labels) {
+        this.labels = labels;
+    }
+}
