@@ -119,7 +119,7 @@ DECLARE
     v_year TEXT;
     v_partition_exists BOOLEAN;
 BEGIN
-    -- Extract month and year from the inserted row's created_time column
+    -- Extract month and year from the NEW.created_time field
     v_month := to_char(NEW.created_time, 'MM');
     v_year := to_char(NEW.created_time, 'YYYY');
 
@@ -130,19 +130,26 @@ BEGIN
     PERFORM to_regclass(v_partition_table_name);
     v_partition_exists := FOUND;
 
+    -- Log the partition table name and existence
+    RAISE NOTICE 'Partition Table Name: %', v_partition_table_name;
+    RAISE NOTICE 'Partition Table Exists: %', v_partition_exists;
+
     -- If the partition table does not exist, create it
     IF NOT v_partition_exists THEN
         -- Create the partition table dynamically
         v_partition_create_query := 'CREATE TABLE ' || v_partition_table_name || 
                                     ' (LIKE esh_main.' || TG_TABLE_NAME || ' INCLUDING ALL) INHERITS (esh_main.' || TG_TABLE_NAME || ')';
+        RAISE NOTICE 'Creating Partition Table: %', v_partition_create_query;
         EXECUTE v_partition_create_query;
 
         -- Optionally create an index on the partition for created_time
         v_index_create_query := 'CREATE INDEX IF NOT EXISTS ' || v_partition_table_name || '_created_time_idx ON ' || v_partition_table_name || ' (created_time)';
+        RAISE NOTICE 'Creating Index on Partition: %', v_index_create_query;
         EXECUTE v_index_create_query;
     END IF;
 
     -- Insert the row into the appropriate partition
+    RAISE NOTICE 'Inserting into Partition: %', v_partition_table_name;
     EXECUTE 'INSERT INTO ' || v_partition_table_name || ' VALUES ($1.*)' USING NEW;
 
     -- Prevent insertion into the parent table
