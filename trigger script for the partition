@@ -113,7 +113,6 @@ CREATE OR REPLACE FUNCTION esh_main.partition_by_month()
 RETURNS TRIGGER AS $$
 DECLARE
     v_partition_table_name TEXT;
-    v_partition_check_query TEXT;
     v_partition_create_query TEXT;
     v_index_create_query TEXT;
     v_month TEXT;
@@ -133,6 +132,7 @@ BEGIN
 
     -- If the partition table does not exist, create it
     IF NOT v_partition_exists THEN
+        -- Create the partition table dynamically
         v_partition_create_query := 'CREATE TABLE ' || v_partition_table_name || 
                                     ' (LIKE esh_main.' || TG_TABLE_NAME || ' INCLUDING ALL) INHERITS (esh_main.' || TG_TABLE_NAME || ')';
         EXECUTE v_partition_create_query;
@@ -149,4 +149,5 @@ BEGIN
     RETURN NULL;
 END;
 $$ LANGUAGE plpgsql;
+
 
