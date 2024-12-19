@@ -1,0 +1,94 @@
+If you want to create the partitioned table in the esh_main schema, here is the updated script tailored for your use case. This script ensures that the partitions are dynamically created under the esh_main schema and inherit from the parent table in the same schema.
+
+Updated Script for the esh_main Schema
+Step 1: Create the Trigger Function
+sql
+Copy code
+CREATE OR REPLACE FUNCTION esh_main.partition_by_month()
+RETURNS TRIGGER AS $$
+DECLARE
+    v_partition_table_name TEXT;
+    v_partition_check_query TEXT;
+    v_partition_create_query TEXT;
+    v_index_create_query TEXT;
+    v_month TEXT;
+    v_year TEXT;
+BEGIN
+    -- Extract month and year from the inserted row's date column
+    v_month := to_char(NEW.created_date, 'MM');
+    v_year := to_char(NEW.created_date, 'YYYY');
+
+    -- Generate the partition table name dynamically
+    v_partition_table_name := 'esh_main.' || TG_TABLE_NAME || '_partition_' || v_year || '_' || v_month;
+
+    -- Check if the partition table exists; if not, create it
+    v_partition_check_query := 'SELECT to_regclass(''' || v_partition_table_name || ''')';
+    IF NOT EXISTS (EXECUTE v_partition_check_query) THEN
+        v_partition_create_query := 'CREATE TABLE IF NOT EXISTS ' || v_partition_table_name || ' (LIKE esh_main.' || TG_TABLE_NAME || ' INCLUDING ALL) INHERITS (esh_main.' || TG_TABLE_NAME || ')';
+        EXECUTE v_partition_create_query;
+
+        -- Optionally create an index on the partition
+        v_index_create_query := 'CREATE INDEX IF NOT EXISTS ' || v_partition_table_name || '_index ON ' || v_partition_table_name || ' (created_date)';
+        EXECUTE v_index_create_query;
+    END IF;
+
+    -- Insert the row into the appropriate partition
+    EXECUTE 'INSERT INTO ' || v_partition_table_name || ' VALUES ($1.*)' USING NEW;
+
+    -- Prevent insertion into the parent table
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+Step 2: Attach the Trigger to the Parent Table
+Assuming your parent table is in the esh_main schema and named original_table, you can attach the trigger as follows:
+
+sql
+Copy code
+CREATE TRIGGER partition_trigger
+BEFORE INSERT ON esh_main.original_table
+FOR EACH ROW
+EXECUTE FUNCTION esh_main.partition_by_month();
+How to Test
+Example Parent Table
+Make sure the parent table already exists in the esh_main schema. Here's an example:
+
+sql
+Copy code
+CREATE TABLE esh_main.original_table (
+    id SERIAL PRIMARY KEY,
+    created_date DATE NOT NULL,
+    tenant_id INT,
+    data TEXT
+);
+Insert Sample Data
+Insert some rows to test the partitioning:
+
+sql
+Copy code
+INSERT INTO esh_main.original_table (created_date, tenant_id, data)
+VALUES ('2024-12-15', 101, 'Partitioned Data December'),
+       ('2024-11-20', 102, 'Partitioned Data November');
+Verify Partition Creation
+Check if the partition tables were created:
+
+sql
+Copy code
+SELECT table_name
+FROM information_schema.tables
+WHERE table_schema = 'esh_main' AND table_name LIKE 'original_table_partition_%';
+Notes
+Schema Awareness:
+
+The function dynamically ensures that all partitions are created under the esh_main schema.
+Query Parent Table:
+
+Queries on the original_table will automatically include data from all its partitions.
+Indexing:
+
+Each partition gets an index on the created_date column for optimized queries.
+Partition Naming Convention:
+
+The partition tables are named esh_main.original_table_partition_<YYYY>_<MM>.
+Additional Constraints:
+
+If additional constraints are needed (e.g., unique keys), you can customize the v_partition_create_query.
