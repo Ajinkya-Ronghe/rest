@@ -119,9 +119,9 @@ DECLARE
     v_year TEXT;
     v_partition_exists BOOLEAN;
 BEGIN
-    -- Extract month and year from the inserted row's date column
-    v_month := to_char(NEW.created_date, 'MM');
-    v_year := to_char(NEW.created_date, 'YYYY');
+    -- Extract month and year from the inserted row's created_time column
+    v_month := to_char(NEW.created_time, 'MM');
+    v_year := to_char(NEW.created_time, 'YYYY');
 
     -- Generate the partition table name dynamically
     v_partition_table_name := 'esh_main.' || TG_TABLE_NAME || '_partition_' || v_year || '_' || v_month;
@@ -137,8 +137,8 @@ BEGIN
                                     ' (LIKE esh_main.' || TG_TABLE_NAME || ' INCLUDING ALL) INHERITS (esh_main.' || TG_TABLE_NAME || ')';
         EXECUTE v_partition_create_query;
 
-        -- Optionally create an index on the partition
-        v_index_create_query := 'CREATE INDEX IF NOT EXISTS ' || v_partition_table_name || '_index ON ' || v_partition_table_name || ' (created_date)';
+        -- Optionally create an index on the partition for created_time
+        v_index_create_query := 'CREATE INDEX IF NOT EXISTS ' || v_partition_table_name || '_created_time_idx ON ' || v_partition_table_name || ' (created_time)';
         EXECUTE v_index_create_query;
     END IF;
 
@@ -149,5 +149,6 @@ BEGIN
     RETURN NULL;
 END;
 $$ LANGUAGE plpgsql;
+
 
 
