@@ -130,7 +130,7 @@ BEGIN
     PERFORM to_regclass(v_partition_table_name);
     v_partition_exists := FOUND;
 
-    -- Log the partition table name and existence
+    -- Debugging output
     RAISE NOTICE 'Partition Table Name: %', v_partition_table_name;
     RAISE NOTICE 'Partition Table Exists: %', v_partition_exists;
 
@@ -143,9 +143,13 @@ BEGIN
         EXECUTE v_partition_create_query;
 
         -- Optionally create an index on the partition for created_time
-        v_index_create_query := 'CREATE INDEX IF NOT EXISTS ' || v_partition_table_name || '_created_time_idx ON ' || v_partition_table_name || ' (created_time)';
+        v_index_create_query := 'CREATE INDEX IF NOT EXISTS ' || replace(v_partition_table_name, '.', '_') || '_created_time_idx ON ' || v_partition_table_name || ' (created_time)';
         RAISE NOTICE 'Creating Index on Partition: %', v_index_create_query;
         EXECUTE v_index_create_query;
+
+        -- Debugging after creation
+        PERFORM * FROM pg_class WHERE relname = replace(v_partition_table_name, 'esh_main.', '');
+        RAISE NOTICE 'Partition successfully created: %', v_partition_table_name;
     END IF;
 
     -- Insert the row into the appropriate partition
@@ -156,6 +160,7 @@ BEGIN
     RETURN NULL;
 END;
 $$ LANGUAGE plpgsql;
+
 
 
 
