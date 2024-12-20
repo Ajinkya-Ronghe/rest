@@ -11,3 +11,21 @@ BEGIN
     RETURN table_found;
 END;
 $$ LANGUAGE plpgsql;
+
+
+
+
+
+DO $$
+DECLARE
+    table_name TEXT := 'esh_main.some_table_name';
+    exists BOOLEAN;
+BEGIN
+    exists := esh_main.table_exists(table_name);
+    IF exists THEN
+        RAISE NOTICE 'Table % exists.', table_name;
+    ELSE
+        RAISE NOTICE 'Table % does not exist.', table_name;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
