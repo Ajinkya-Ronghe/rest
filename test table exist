@@ -3,11 +3,15 @@ RETURNS BOOLEAN AS $$
 DECLARE
     table_found BOOLEAN;
 BEGIN
-    -- Check if the table exists
-    PERFORM to_regclass(table_name);
-    table_found := FOUND;
+    -- Check if the table exists using pg_class and pg_namespace
+    SELECT EXISTS (
+        SELECT 1
+        FROM pg_class c
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE c.relname = split_part(table_name, '.', 2) -- Extract table name
+          AND n.nspname = split_part(table_name, '.', 1) -- Extract schema name
+    ) INTO table_found;
 
-    -- Return the result
     RETURN table_found;
 END;
 $$ LANGUAGE plpgsql;
