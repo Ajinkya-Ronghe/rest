@@ -1,0 +1,13 @@
+CREATE OR REPLACE FUNCTION esh_main.table_exists(table_name TEXT)
+RETURNS BOOLEAN AS $$
+DECLARE
+    table_found BOOLEAN;
+BEGIN
+    -- Check if the table exists
+    PERFORM to_regclass(table_name);
+    table_found := FOUND;
+
+    -- Return the result
+    RETURN table_found;
+END;
+$$ LANGUAGE plpgsql;
