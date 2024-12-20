@@ -4,6 +4,7 @@ DECLARE
     v_partition_table_name TEXT;
     v_partition_create_query TEXT;
     v_index_create_query TEXT;
+    v_index_name TEXT;
     v_month TEXT;
     v_year TEXT;
     v_partition_exists BOOLEAN;
@@ -15,7 +16,10 @@ BEGIN
     -- Generate the partition table name dynamically
     v_partition_table_name := 'esh_main.' || TG_TABLE_NAME || '_partition_' || v_year || '_' || v_month;
 
-    -- Use the esh_main.table_exists function to check if the table exists
+    -- Generate a valid index name by replacing dots with underscores
+    v_index_name := replace(v_partition_table_name, '.', '_') || '_created_time_idx';
+
+    -- Check if the partition table exists
     v_partition_exists := esh_main.table_exists(v_partition_table_name);
 
     -- Log the partition table name and existence
@@ -29,12 +33,13 @@ BEGIN
                                     ' (LIKE esh_main.' || TG_TABLE_NAME || ' INCLUDING ALL) INHERITS (esh_main.' || TG_TABLE_NAME || ')';
         RAISE NOTICE 'Creating Partition Table: %', v_partition_create_query;
         EXECUTE v_partition_create_query;
-
-        -- Optionally create an index on the partition for created_time
-        v_index_create_query := 'CREATE INDEX IF NOT EXISTS ' || v_partition_table_name || '_created_time_idx ON ' || v_partition_table_name || ' (created_time)';
-        RAISE NOTICE 'Creating Index on Partition: %', v_index_create_query;
-        EXECUTE v_index_create_query;
     END IF;
+
+    -- Create an index on the partition if it does not already exist
+    v_index_create_query := 'CREATE INDEX IF NOT EXISTS ' || v_index_name || 
+                            ' ON ' || v_partition_table_name || ' (created_time)';
+    RAISE NOTICE 'Creating Index on Partition: %', v_index_create_query;
+    EXECUTE v_index_create_query;
 
     -- Insert the row into the appropriate partition
     RAISE NOTICE 'Inserting into Partition: %', v_partition_table_name;
