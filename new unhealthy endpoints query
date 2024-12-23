@@ -1,0 +1,30 @@
+WITH filtered_data AS (
+    SELECT 
+        "Computer Name",
+        "Tanium Client Core Health",
+        time,
+        CASE
+            WHEN "Tanium Client Core Health" LIKE 'Error%' OR
+                 "Tanium Client Core Health" LIKE 'PowerShell%'
+            THEN 'error'
+            ELSE NULL
+        END AS core_health_eval
+    FROM tanium_client_data
+    WHERE "Tanium Client Core Health" NOT LIKE 'Healthy%'
+      AND time >= NOW() - INTERVAL '7 days'  -- Filter for the last 7 days
+),
+deduplicated_data AS (
+    SELECT DISTINCT ON ("Computer Name", time)
+        "Computer Name",
+        time,
+        core_health_eval
+    FROM filtered_data
+    WHERE core_health_eval = 'error'
+)
+SELECT 
+    time,
+    core_health_eval,
+    COUNT(*) AS count
+FROM deduplicated_data
+GROUP BY time, core_health_eval
+ORDER BY time;
