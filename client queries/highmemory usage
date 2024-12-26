@@ -1,0 +1,16 @@
+WITH extracted_processes AS (
+    SELECT
+        regexp_matches(raw_data, 'High-CPU-Processes.5.=(\S+?)\s') AS process
+    FROM processes
+),
+process_counts AS (
+    SELECT
+        process[1] AS process, -- Extracting the matched group from regexp_matches
+        COUNT(*) AS count
+    FROM extracted_processes
+    GROUP BY process[1]
+)
+SELECT process, count
+FROM process_counts
+ORDER BY count DESC
+LIMIT 5;
