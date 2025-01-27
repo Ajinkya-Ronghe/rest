@@ -1,18 +1,35 @@
 DO $$
 DECLARE
-    tbl_name TEXT := 'esh_main.cehs'; -- Replace with your table name
-    search_value TEXT := 'The Firefox c'; -- Replace with your search value
+    tbl_schema TEXT := 'esh_main'; -- Replace with your schema name
+    tbl_name TEXT := 'ceh_tn_fs_cve_vulnerability_findings_details'; -- Replace with your table name
+    search_value TEXT := 'The Firefox content processes did not sufficiently isolate cookies'; -- Replace with your search value
     col_name TEXT;
     sql_query TEXT;
+    result_count INT;
 BEGIN
+    -- Debugging Step: Output Table and Schema Names
+    RAISE NOTICE 'Table: %, Schema: %', tbl_name, tbl_schema;
+
+    -- Iterate through all columns of the table
     FOR col_name IN
         SELECT column_name
         FROM information_schema.columns
-        WHERE table_name = split_part(tbl_name, '.', 3) -- Extracts the actual table name without schema
-          AND table_schema = split_part(tbl_name, '.', 2) -- Extracts the schema name
+        WHERE table_name = tbl_name
+          AND table_schema = tbl_schema
     LOOP
-        sql_query := format('SELECT %L AS column_name FROM %I WHERE CAST(%I AS TEXT) = %L',
-                            col_name, tbl_name, col_name, search_value);
-        EXECUTE sql_query;
+        -- Debugging Step: Output Column Name
+        RAISE NOTICE 'Checking column: %', col_name;
+
+        -- Dynamic query to search for the value in the current column
+        sql_query := format('SELECT COUNT(*) FROM %I.%I WHERE CAST(%I AS TEXT) = %L',
+                            tbl_schema, tbl_name, col_name, search_value);
+        
+        -- Execute the query and store the result
+        EXECUTE sql_query INTO result_count;
+
+        -- If the value is found, print the column name
+        IF result_count > 0 THEN
+            RAISE NOTICE 'Value found in column: %', col_name;
+        END IF;
     END LOOP;
 END $$;
