@@ -1,8 +1,8 @@
 DO $$
 DECLARE
     tbl_schema TEXT := 'esh_main'; -- Replace with your schema name
-    tbl_name TEXT := 'c'; -- Replace with your table name
-    search_value TEXT := 'The '; -- Replace with your search value
+    tbl_name TEXT := 'ces'; -- Replace with your table name
+    search_value TEXT := 'The Firefoes'; -- Replace with your search value
     col_name TEXT;
     sql_query TEXT;
     result_count INT;
@@ -20,16 +20,25 @@ BEGIN
         -- Debugging Step: Output Column Name
         RAISE NOTICE 'Checking column: %', col_name;
 
-        -- Dynamic query to search for the value in the current column
+        -- Dynamic query to count matching rows
         sql_query := format('SELECT COUNT(*) FROM %I.%I WHERE CAST(%I AS TEXT) = %L',
                             tbl_schema, tbl_name, col_name, search_value);
         
-        -- Execute the query and store the result
+        -- Execute the query and store the result count
         EXECUTE sql_query INTO result_count;
 
-        -- If the value is found, print the column name
+        -- If the value is found, fetch and display rows
         IF result_count > 0 THEN
             RAISE NOTICE 'Value found in column: %', col_name;
+
+            -- Fetch and display matching rows
+            sql_query := format('SELECT * FROM %I.%I WHERE CAST(%I AS TEXT) = %L',
+                                tbl_schema, tbl_name, col_name, search_value);
+            
+            FOR row_record IN EXECUTE sql_query
+            LOOP
+                RAISE NOTICE 'Matching Row: %', row_record;
+            END LOOP;
         END IF;
     END LOOP;
 END $$;
