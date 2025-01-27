@@ -1,17 +1,18 @@
 DO $$
 DECLARE
-    table_name TEXT := 'your_table_name'; -- Replace with your table name
-    search_value TEXT := 'your_search_value'; -- Replace with the value to search
+    tbl_name TEXT := 'esh_main.cehs'; -- Replace with your table name
+    search_value TEXT := 'The Firefox c'; -- Replace with your search value
     col_name TEXT;
     sql_query TEXT;
 BEGIN
     FOR col_name IN
         SELECT column_name
         FROM information_schema.columns
-        WHERE table_name = table_name
+        WHERE table_name = split_part(tbl_name, '.', 3) -- Extracts the actual table name without schema
+          AND table_schema = split_part(tbl_name, '.', 2) -- Extracts the schema name
     LOOP
         sql_query := format('SELECT %L AS column_name FROM %I WHERE CAST(%I AS TEXT) = %L',
-                            col_name, table_name, col_name, search_value);
+                            col_name, tbl_name, col_name, search_value);
         EXECUTE sql_query;
     END LOOP;
 END $$;
