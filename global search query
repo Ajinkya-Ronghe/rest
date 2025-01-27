@@ -1,7 +1,7 @@
 DO $$
 DECLARE
     tbl_schema TEXT := 'esh_main'; -- Replace with your schema name
-    tbl_name TEXT := 'ceh_tn_fs_cve_vulnerability_findings_details'; -- Replace with your table name
+    tbl_name TEXT := 'c'; -- Replace with your table name
     search_value TEXT := 'The Firefox content processes did not sufficiently isolate cookies'; -- Replace with your search value
     col_name TEXT;
     sql_query TEXT;
