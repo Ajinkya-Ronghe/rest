@@ -1,0 +1,17 @@
+DO $$
+DECLARE
+    col_list TEXT;
+    search_query TEXT;
+BEGIN
+    -- Generate concatenated column list dynamically
+    SELECT STRING_AGG('COALESCE(' || column_name || '::TEXT, '''')', ' || '' '' || ')
+    INTO col_list
+    FROM information_schema.columns
+    WHERE table_name = 'your_table_name';
+
+    -- Create the dynamic search query
+    search_query := 'SELECT * FROM your_table_name WHERE ' || col_list || ' ILIKE ''%your_search_term%'';';
+    
+    -- Execute the query
+    EXECUTE search_query;
+END $$;
