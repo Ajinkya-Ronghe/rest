@@ -2,7 +2,7 @@ DO $$
 DECLARE
     tbl_schema TEXT := 'esh_main'; -- Replace with your schema name
     tbl_name TEXT := 'c'; -- Replace with your table name
-    search_value TEXT := 'The Firefox content processes did not sufficiently isolate cookies'; -- Replace with your search value
+    search_value TEXT := 'The '; -- Replace with your search value
     col_name TEXT;
     sql_query TEXT;
     result_count INT;
