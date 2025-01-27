@@ -1,17 +1,17 @@
 DO $$
 DECLARE
-    col_list TEXT;
-    search_query TEXT;
+    table_name TEXT := 'your_table_name'; -- Replace with your table name
+    search_value TEXT := 'your_search_value'; -- Replace with the value to search
+    col_name TEXT;
+    sql_query TEXT;
 BEGIN
-    -- Generate concatenated column list dynamically
-    SELECT STRING_AGG('COALESCE(' || column_name || '::TEXT, '''')', ' || '' '' || ')
-    INTO col_list
-    FROM information_schema.columns
-    WHERE table_name = 'your_table_name';
-
-    -- Create the dynamic search query
-    search_query := 'SELECT * FROM your_table_name WHERE ' || col_list || ' ILIKE ''%your_search_term%'';';
-    
-    -- Execute the query
-    EXECUTE search_query;
+    FOR col_name IN
+        SELECT column_name
+        FROM information_schema.columns
+        WHERE table_name = table_name
+    LOOP
+        sql_query := format('SELECT %L AS column_name FROM %I WHERE CAST(%I AS TEXT) = %L',
+                            col_name, table_name, col_name, search_value);
+        EXECUTE sql_query;
+    END LOOP;
 END $$;
