@@ -1,0 +1,23 @@
+WITH latest_records AS (
+    SELECT
+        computer_name,
+        patch_installation_state_title,
+        patch_installation_state_install_status,
+        ROW_NUMBER() OVER (
+            PARTITION BY (computer_name, patch_installation_state_title)
+            ORDER BY created_time DESC
+        ) AS rn
+    FROM esh_main.ceh_tn_patch_installation_state_all_status
+    WHERE created_time >= (NOW() AT TIME ZONE 'UTC') - INTERVAL '24 hours'
+)
+SELECT
+    patch_installation_state_install_status,
+    COUNT(*) AS cn,
+    ROUND(
+      COUNT(*) * 100.0 / SUM(COUNT(*)) OVER (),
+      2
+    ) AS perc
+FROM latest_records
+WHERE rn = 1
+GROUP BY patch_installation_state_install_status
+ORDER BY cn DESC;
