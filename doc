@@ -1,0 +1,123 @@
+from docx import Document
+
+# Create a new document
+doc = Document()
+
+# Add title
+doc.add_heading('ESHRestAPIMicroservice - Detailed Documentation', level=1)
+
+# Table of Contents
+doc.add_heading('Table of Contents', level=2)
+doc.add_paragraph("1. Introduction\n"
+                  "2. Project Structure\n"
+                  "3. Configuration\n"
+                  "4. Deployment\n"
+                  "5. API Endpoints\n"
+                  "6. Database Schema\n"
+                  "7. Batch Processing Logic\n"
+                  "8. Logging\n"
+                  "9. SSL and Security Setup\n"
+                  "10. Error Handling\n"
+                  "11. Performance Considerations\n")
+
+# Introduction
+doc.add_heading('1. Introduction', level=2)
+doc.add_paragraph("The ESHRestAPIMicroservice is a Spring Boot-based microservice designed to handle large-scale JSON data "
+                  "processing and batch request management. It includes database integration with PostgreSQL, efficient "
+                  "logging, and SSL security.")
+
+# Project Structure
+doc.add_heading('2. Project Structure', level=2)
+doc.add_paragraph("The project follows a standard Maven-based structure:\n"
+                  "• src/main/java: Contains all Java source files\n"
+                  "• src/main/resources: Configuration files including properties and log settings\n"
+                  "• target/: Compiled output and JAR files\n"
+                  "• config/: External configuration files (database, SSL, logging)\n"
+                  "• bin/: Start and stop scripts\n")
+
+# Configuration
+doc.add_heading('3. Configuration', level=2)
+doc.add_paragraph("The application is configured via external property files located in the config/ directory.\n"
+                  "• application.properties - Main Spring Boot configurations\n"
+                  "• database.properties - Database connection details\n"
+                  "• logback-spring.xml - Logging configuration\n"
+                  "• keystore.jks - SSL certificate")
+
+# Deployment
+doc.add_heading('4. Deployment', level=2)
+doc.add_paragraph("Deployment involves building the project using Maven and running the packaged JAR file.\n"
+                  "1. Build the project:\n"
+                  "   ```\n"
+                  "   mvn clean package\n"
+                  "   ```\n"
+                  "2. Extract the tarball:\n"
+                  "   ```\n"
+                  "   tar -xvf ESHRestAPIMicroservice.tar\n"
+                  "   ```\n"
+                  "3. Start the service:\n"
+                  "   ```\n"
+                  "   sh bin/start.sh\n"
+                  "   ```")
+
+# API Endpoints
+doc.add_heading('5. API Endpoints', level=2)
+doc.add_paragraph("The following endpoints are available:\n"
+                  "• POST /api/sendrequest - Accepts JSON payloads for processing\n"
+                  "• GET /api/status - Checks service health\n"
+                  "• GET /actuator - Exposes monitoring endpoints")
+
+# Database Schema
+doc.add_heading('6. Database Schema', level=2)
+doc.add_paragraph("• staging_data (Stores incoming requests)\n"
+                  "   - batch_id (BIGINT)\n"
+                  "   - req_name (VARCHAR)\n"
+                  "   - json_text_data (JSONB)\n"
+                  "   - created_date (TIMESTAMP)\n"
+                  "• metadata_type (Defines batch processing rules)\n"
+                  "   - type_name (VARCHAR)\n"
+                  "   - is_batch_enabled (BOOLEAN)\n")
+
+# Batch Processing Logic
+doc.add_heading('7. Batch Processing Logic', level=2)
+doc.add_paragraph("Batch processing ensures requests of the same type within 5 seconds are grouped under a single batch ID.\n"
+                  "1. Fetch the last batch ID and created_date from the database.\n"
+                  "2. Compare the timestamp with the incoming request time.\n"
+                  "3. Assign a new batch ID if the time exceeds 5 seconds, otherwise reuse the last batch ID.\n")
+
+# Logging
+doc.add_heading('8. Logging', level=2)
+doc.add_paragraph("Logs are stored in the logs/ directory and include request processing details, errors, and batch processing logs.\n"
+                  "• INFO: General application status\n"
+                  "• DEBUG: Detailed request handling logs\n"
+                  "• ERROR: Any failures encountered")
+
+# SSL and Security Setup
+doc.add_heading('9. SSL and Security Setup', level=2)
+doc.add_paragraph("The microservice supports HTTPS using a keystore.\n"
+                  "• The keystore.jks file is placed in the config/ directory.\n"
+                  "• The application properties define SSL settings:\n"
+                  "   ```\n"
+                  "   server.ssl.key-store=config/keystore.jks\n"
+                  "   server.ssl.key-store-password=changeit\n"
+                  "   ```")
+
+# Error Handling
+doc.add_heading('10. Error Handling', level=2)
+doc.add_paragraph("The service handles errors using global exception handlers. Common error cases include:\n"
+                  "• Database connection failure\n"
+                  "• JSON parsing issues\n"
+                  "• Large object storage failures\n")
+
+# Performance Considerations
+doc.add_heading('11. Performance Considerations', level=2)
+doc.add_paragraph("To handle large requests efficiently, the service utilizes:\n"
+                  "• PostgreSQL Large Object storage for JSON data\n"
+                  "• Thread pools for request processing\n"
+                  "• Optimized database indexing\n")
+
+# Save the document
+doc_path = "/mnt/data/ESHRestAPIMicroservice_Documentation.docx"
+doc.save(doc_path)
+
+# Provide the download link
+doc_path
