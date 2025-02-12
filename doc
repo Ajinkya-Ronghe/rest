@@ -1,123 +1,151 @@
-from docx import Document
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>ESHRestAPIMicroservice Documentation</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; }
+        h1, h2, h3 { color: #333; }
+        a { text-decoration: none; color: #007bff; }
+        a:hover { text-decoration: underline; }
+        pre { background: #f4f4f4; padding: 10px; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <h1>ESHRestAPIMicroservice Documentation</h1>
+    <h2>Table of Contents</h2>
+    <ul>
+        <li><a href="#introduction">Introduction</a></li>
+        <li><a href="#project-structure">Project Structure</a></li>
+        <li><a href="#technology-stack">Technology Stack</a></li>
+        <li><a href="#setup-and-installation">Setup and Installation</a></li>
+        <li><a href="#configuration">Configuration</a></li>
+        <li><a href="#endpoints">Endpoints</a></li>
+        <li><a href="#batch-processing-logic">Batch Processing Logic</a></li>
+        <li><a href="#database-schema">Database Schema</a></li>
+        <li><a href="#logging-mechanism">Logging Mechanism</a></li>
+        <li><a href="#error-handling">Error Handling</a></li>
+        <li><a href="#deployment">Deployment</a></li>
+        <li><a href="#future-enhancements">Future Enhancements</a></li>
+    </ul>
 
-# Create a new document
-doc = Document()
+    <h2 id="introduction">Introduction</h2>
+    <p>This document provides a comprehensive guide to the <b>ESHRestAPIMicroservice</b> project, covering its architecture, setup, functionality, and deployment processes.</p>
 
-# Add title
-doc.add_heading('ESHRestAPIMicroservice - Detailed Documentation', level=1)
+    <h2 id="project-structure">Project Structure</h2>
+    <pre>
+ESHRestAPIMicroservice/
+│── src/
+│   ├── main/
+│   │   ├── java/com/infy/ceh/management/
+│   │   │   ├── controller/
+│   │   │   ├── service/
+│   │   │   ├── repository/
+│   │   │   ├── util/
+│   │   │   ├── Application.java
+│   │   ├── resources/
+│   │       ├── application.properties
+│   │       ├── logback-spring.xml
+│── target/
+│── pom.xml
+│── README.md
+    </pre>
 
-# Table of Contents
-doc.add_heading('Table of Contents', level=2)
-doc.add_paragraph("1. Introduction\n"
-                  "2. Project Structure\n"
-                  "3. Configuration\n"
-                  "4. Deployment\n"
-                  "5. API Endpoints\n"
-                  "6. Database Schema\n"
-                  "7. Batch Processing Logic\n"
-                  "8. Logging\n"
-                  "9. SSL and Security Setup\n"
-                  "10. Error Handling\n"
-                  "11. Performance Considerations\n")
+    <h2 id="technology-stack">Technology Stack</h2>
+    <ul>
+        <li><b>Spring Boot</b> - Microservices framework</li>
+        <li><b>PostgreSQL</b> - Database</li>
+        <li><b>Java 11+</b> - Programming language</li>
+        <li><b>Maven</b> - Build tool</li>
+        <li><b>Docker</b> - Containerization (Optional)</li>
+    </ul>
 
-# Introduction
-doc.add_heading('1. Introduction', level=2)
-doc.add_paragraph("The ESHRestAPIMicroservice is a Spring Boot-based microservice designed to handle large-scale JSON data "
-                  "processing and batch request management. It includes database integration with PostgreSQL, efficient "
-                  "logging, and SSL security.")
+    <h2 id="setup-and-installation">Setup and Installation</h2>
+    <h3>Prerequisites:</h3>
+    <ul>
+        <li>Java 11 or later installed</li>
+        <li>PostgreSQL configured</li>
+        <li>Maven installed</li>
+    </ul>
+    <h3>Steps to Set Up:</h3>
+    <pre>
+1. Clone the repository:
+   git clone &lt;repository_url&gt;
 
-# Project Structure
-doc.add_heading('2. Project Structure', level=2)
-doc.add_paragraph("The project follows a standard Maven-based structure:\n"
-                  "• src/main/java: Contains all Java source files\n"
-                  "• src/main/resources: Configuration files including properties and log settings\n"
-                  "• target/: Compiled output and JAR files\n"
-                  "• config/: External configuration files (database, SSL, logging)\n"
-                  "• bin/: Start and stop scripts\n")
+2. Navigate to the project directory:
+   cd ESHRestAPIMicroservice
 
-# Configuration
-doc.add_heading('3. Configuration', level=2)
-doc.add_paragraph("The application is configured via external property files located in the config/ directory.\n"
-                  "• application.properties - Main Spring Boot configurations\n"
-                  "• database.properties - Database connection details\n"
-                  "• logback-spring.xml - Logging configuration\n"
-                  "• keystore.jks - SSL certificate")
+3. Build the project:
+   mvn clean package
 
-# Deployment
-doc.add_heading('4. Deployment', level=2)
-doc.add_paragraph("Deployment involves building the project using Maven and running the packaged JAR file.\n"
-                  "1. Build the project:\n"
-                  "   ```\n"
-                  "   mvn clean package\n"
-                  "   ```\n"
-                  "2. Extract the tarball:\n"
-                  "   ```\n"
-                  "   tar -xvf ESHRestAPIMicroservice.tar\n"
-                  "   ```\n"
-                  "3. Start the service:\n"
-                  "   ```\n"
-                  "   sh bin/start.sh\n"
-                  "   ```")
+4. Run the microservice:
+   java -jar target/ESHRestAPIMicroservice-1.0-SNAPSHOT.jar
+    </pre>
 
-# API Endpoints
-doc.add_heading('5. API Endpoints', level=2)
-doc.add_paragraph("The following endpoints are available:\n"
-                  "• POST /api/sendrequest - Accepts JSON payloads for processing\n"
-                  "• GET /api/status - Checks service health\n"
-                  "• GET /actuator - Exposes monitoring endpoints")
+    <h2 id="configuration">Configuration</h2>
+    <pre>
+server.port=8443
+server.ssl.key-store=config/keystore.jks
+spring.config.location=file:./config/
+spring.datasource.url=jdbc:postgresql://localhost:5432/mydb
+spring.datasource.username=admin
+spring.datasource.password=admin
+    </pre>
 
-# Database Schema
-doc.add_heading('6. Database Schema', level=2)
-doc.add_paragraph("• staging_data (Stores incoming requests)\n"
-                  "   - batch_id (BIGINT)\n"
-                  "   - req_name (VARCHAR)\n"
-                  "   - json_text_data (JSONB)\n"
-                  "   - created_date (TIMESTAMP)\n"
-                  "• metadata_type (Defines batch processing rules)\n"
-                  "   - type_name (VARCHAR)\n"
-                  "   - is_batch_enabled (BOOLEAN)\n")
+    <h2 id="endpoints">Endpoints</h2>
+    <h3>1. Receive Request (POST)</h3>
+    <pre>
+POST /api/sendrequest?type={type}&id={id}
+    </pre>
+    <h3>2. Retrieve Request (GET)</h3>
+    <pre>
+GET /api/getrequest?id={id}
+    </pre>
 
-# Batch Processing Logic
-doc.add_heading('7. Batch Processing Logic', level=2)
-doc.add_paragraph("Batch processing ensures requests of the same type within 5 seconds are grouped under a single batch ID.\n"
-                  "1. Fetch the last batch ID and created_date from the database.\n"
-                  "2. Compare the timestamp with the incoming request time.\n"
-                  "3. Assign a new batch ID if the time exceeds 5 seconds, otherwise reuse the last batch ID.\n")
+    <h2 id="batch-processing-logic">Batch Processing Logic</h2>
+    <p>Requests are <b>grouped into batches</b> if received within <b>5 seconds</b>.</p>
 
-# Logging
-doc.add_heading('8. Logging', level=2)
-doc.add_paragraph("Logs are stored in the logs/ directory and include request processing details, errors, and batch processing logs.\n"
-                  "• INFO: General application status\n"
-                  "• DEBUG: Detailed request handling logs\n"
-                  "• ERROR: Any failures encountered")
+    <h2 id="database-schema">Database Schema</h2>
+    <pre>
+Table: staging_data
+| Column         | Type                   | Description         |
+|---------------|-----------------------|---------------------|
+| id           | SERIAL PRIMARY KEY      | Unique request ID   |
+| req_name     | VARCHAR(255)            | Request type        |
+| json_text_data | TEXT                  | Large JSON payload  |
+| created_date | TIMESTAMP WITHOUT TIME ZONE | Request timestamp |
+    </pre>
 
-# SSL and Security Setup
-doc.add_heading('9. SSL and Security Setup', level=2)
-doc.add_paragraph("The microservice supports HTTPS using a keystore.\n"
-                  "• The keystore.jks file is placed in the config/ directory.\n"
-                  "• The application properties define SSL settings:\n"
-                  "   ```\n"
-                  "   server.ssl.key-store=config/keystore.jks\n"
-                  "   server.ssl.key-store-password=changeit\n"
-                  "   ```")
+    <h2 id="logging-mechanism">Logging Mechanism</h2>
+    <pre>
+logging.config=classpath:logback-spring.xml
+logging.file.path=logs
+logging.level.com.infy=DEBUG
+    </pre>
 
-# Error Handling
-doc.add_heading('10. Error Handling', level=2)
-doc.add_paragraph("The service handles errors using global exception handlers. Common error cases include:\n"
-                  "• Database connection failure\n"
-                  "• JSON parsing issues\n"
-                  "• Large object storage failures\n")
+    <h2 id="error-handling">Error Handling</h2>
+    <p>Errors are logged and proper HTTP response codes are returned.</p>
 
-# Performance Considerations
-doc.add_heading('11. Performance Considerations', level=2)
-doc.add_paragraph("To handle large requests efficiently, the service utilizes:\n"
-                  "• PostgreSQL Large Object storage for JSON data\n"
-                  "• Thread pools for request processing\n"
-                  "• Optimized database indexing\n")
+    <h2 id="deployment">Deployment</h2>
+    <h3>Creating a TAR Archive:</h3>
+    <pre>
+mvn clean package assembly:single
+    </pre>
+    <h3>Running in Production:</h3>
+    <pre>
+nohup java -jar target/ESHRestAPIMicroservice-1.0-SNAPSHOT.jar &
+    </pre>
+    <h3>Running in Docker:</h3>
+    <pre>
+docker build -t esh-microservice .
+docker run -d -p 8443:8443 esh-microservice
+    </pre>
 
-# Save the document
-doc_path = "/mnt/data/ESHRestAPIMicroservice_Documentation.docx"
-doc.save(doc_path)
-
-# Provide the download link
-doc_path
+    <h2 id="future-enhancements">Future Enhancements</h2>
+    <ul>
+        <li>Implement <b>Kafka-based event streaming</b> for better batch processing.</li>
+        <li>Support for <b>MongoDB</b> as an optional storage backend.</li>
+        <li>Implement <b>rate limiting</b> to handle high request volumes.</li>
+    </ul>
+</body>
+</html>
