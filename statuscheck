@@ -1,0 +1,23 @@
+import subprocess
+
+print('Checking ESH Webboot Service Status...')
+service_name = "ESHWebBoot"
+
+# Run the command to check for the service
+command = f"ps -ef | grep {service_name} | grep -v grep"
+result = subprocess.getoutput(command).strip()
+
+if result:
+    processes = result.split("\n")
+    print("\nService Status: RUNNING")
+    print("=" * 40)
+    print(f"{'PID':<10} {'User':<10} {'Command'}")
+    print("-" * 40)
+    for process in processes:
+        parts = process.split()
+        pid = parts[1]
+        user = parts[0]
+        command = " ".join(parts[7:])
+        print(f"{pid:<10} {user:<10} {command}")
+else:
+    print("\nService Status: NOT RUNNING")
