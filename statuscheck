@@ -21,3 +21,28 @@ if result:
         print(f"{pid:<10} {user:<10} {command}")
 else:
     print("\nService Status: NOT RUNNING")
+
+
+
+
+
+
+import subprocess
+
+service_name = "ESHWebBoot"
+
+# Run the command to check for the service
+command = f"ps -ef | grep {service_name} | grep -v grep"
+result = subprocess.getoutput(command).strip()
+
+if result:
+    processes = result.split("\n")
+    for process in processes:
+        parts = process.split()
+        pid = parts[1]
+        user = parts[0]
+        command = " ".join(parts[7:])
+        print(f"{pid} | RUNNING | {user} | {command}")
+else:
+    print("NONE | NOT RUNNING | NONE | NONE")
+
