@@ -1,0 +1,542 @@
+0
+SECTION
+2
+HEADER
+9
+$ACADVER
+1
+AC1009
+0
+ENDSEC
+0
+SECTION
+2
+TABLES
+0
+TABLE
+2
+LAYER
+70
+1
+0
+LAYER
+2
+WALLS
+70
+0
+62
+7
+6
+CONTINUOUS
+0
+LAYER
+2
+DOORS
+70
+0
+62
+1
+6
+CONTINUOUS
+0
+LAYER
+2
+WINDOWS
+70
+0
+62
+4
+6
+CONTINUOUS
+0
+LAYER
+2
+TEXT
+70
+0
+62
+2
+6
+CONTINUOUS
+0
+ENDTAB
+0
+ENDSEC
+0
+SECTION
+2
+BLOCKS
+0
+ENDSEC
+0
+SECTION
+2
+ENTITIES
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; 2BHK FLOOR PLAN (All dimensions in millimeters)
+; Overall external size: 8000 x 6000
+; Exterior wall thickness: ~200 mm
+; One horizontal partition for top/bottom
+; One vertical partition in top area (2 bedrooms)
+; One vertical partition in bottom area (living/kitchen)
+; Gaps for doors, arcs for door swings, windows on external walls
+; Room labels in TEXT layer
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; 1) EXTERNAL WALLS (Layer: WALLS)
+;    Outer rectangle (0,0) -> (8000,0) -> (8000,6000) -> (0,6000) -> (0,0)
+;    BUT with a gap for the main door at the bottom (x=3400..3600).
+;    Inner offset rectangle (200,200)->(7800,200)->(7800,5800)->(200,5800)
+;    also with a gap for the main door offset (x=3400..3600).
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+0
+LINE
+8
+WALLS
+10
+0
+20
+0
+11
+3400
+21
+0
+0
+LINE
+8
+WALLS
+10
+3600
+20
+0
+11
+8000
+21
+0
+0
+LINE
+8
+WALLS
+10
+8000
+20
+0
+11
+8000
+21
+6000
+0
+LINE
+8
+WALLS
+10
+8000
+20
+6000
+11
+0
+21
+6000
+0
+LINE
+8
+WALLS
+10
+0
+20
+6000
+11
+0
+21
+0
+
+; Inner offset
+0
+LINE
+8
+WALLS
+10
+200
+20
+200
+11
+3400
+21
+200
+0
+LINE
+8
+WALLS
+10
+3600
+20
+200
+11
+7800
+21
+200
+0
+LINE
+8
+WALLS
+10
+7800
+20
+200
+11
+7800
+21
+5800
+0
+LINE
+8
+WALLS
+10
+7800
+20
+5800
+11
+200
+21
+5800
+0
+LINE
+8
+WALLS
+10
+200
+20
+5800
+11
+200
+21
+200
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; 2) PARTITIONS (Layer: WALLS)
+;    - Horizontal partition between top & bottom (2 lines, thickness 200 mm)
+;      from y=3000..3200 inside
+;    - Vertical partition in top area (2 lines, thickness 200 mm)
+;      from x=4000..4200 inside
+;    - Vertical partition in bottom area (2 lines, thickness 200 mm)
+;      from x=4000..4200 inside
+;    - NOTE: We'll leave gaps for interior doors.
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; Horizontal partition, skipping a door gap from x=3700..3800
+; Lower line from (200,3000)->(3700,3000) and (3800,3000)->(7800,3000)
+0
+LINE
+8
+WALLS
+10
+200
+20
+3000
+11
+3700
+21
+3000
+0
+LINE
+8
+WALLS
+10
+3800
+20
+3000
+11
+7800
+21
+3000
+
+; Upper line from (200,3200)->(3700,3200) and (3800,3200)->(7800,3200)
+0
+LINE
+8
+WALLS
+10
+200
+20
+3200
+11
+3700
+21
+3200
+0
+LINE
+8
+WALLS
+10
+3800
+20
+3200
+11
+7800
+21
+3200
+
+; Top-area vertical partition, skipping no doors for simplicity:
+; Two lines from y=3200->5800 at x=4000..4200
+0
+LINE
+8
+WALLS
+10
+4000
+20
+3200
+11
+4000
+21
+5800
+0
+LINE
+8
+WALLS
+10
+4200
+20
+3200
+11
+4200
+21
+5800
+
+; Bottom-area vertical partition, from y=200->3000 at x=4000..4200
+; skipping no doors for simplicity
+0
+LINE
+8
+WALLS
+10
+4000
+20
+200
+11
+4000
+21
+3000
+0
+LINE
+8
+WALLS
+10
+4200
+20
+200
+11
+4200
+21
+3000
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; 3) DOORS (Layer: DOORS)
+;    - Main entrance door at bottom gap (x=3400..3600).
+;    - Interior door for top partition gap (x=3700..3800).
+;    - Simple arcs to represent door swings.
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; MAIN DOOR arcs (two arcs for a simple door leaf + door frame):
+; Hinge near x=3400 side, let's define an arc with center at (3400,200).
+; The radius is 1000 mm (just for illustration).
+; Start angle ~ 0°, end angle ~ 90° or so.
+0
+ARC
+8
+DOORS
+10
+3400
+20
+200
+40
+1000
+50
+0
+51
+90
+
+; Another smaller arc for inside thickness, radius=900, from 0° to 90°
+0
+ARC
+8
+DOORS
+10
+3400
+20
+200
+40
+900
+50
+0
+51
+90
+
+; INTERIOR DOOR arcs (gap from x=3700..3800 in the horizontal partition):
+; Suppose the hinge is at (3700,3000). We’ll do arcs that swing downward.
+; Center = (3700,3000), radius=1000, angles from 270° to 360° for a 90° swing
+0
+ARC
+8
+DOORS
+10
+3700
+20
+3000
+40
+1000
+50
+270
+51
+360
+
+; And an inner arc for the door thickness, radius=900 mm
+0
+ARC
+8
+DOORS
+10
+3700
+20
+3000
+40
+900
+50
+270
+51
+360
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; 4) WINDOWS (Layer: WINDOWS)
+;    - Let’s place some windows on the top external wall for each bedroom.
+;      For bedroom1: from x=600..1400 near top outer wall
+;      For bedroom2: from x=4600..5400 near top outer wall
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; Bedroom1 window (outer line) at top outer wall from (600,6000)->(1400,6000)
+0
+LINE
+8
+WINDOWS
+10
+600
+20
+6000
+11
+1400
+21
+6000
+
+; Bedroom1 window (inner line) from (600,5800)->(1400,5800)
+0
+LINE
+8
+WINDOWS
+10
+600
+20
+5800
+11
+1400
+21
+5800
+
+; Bedroom2 window (outer line) from (4600,6000)->(5400,6000)
+0
+LINE
+8
+WINDOWS
+10
+4600
+20
+6000
+11
+5400
+21
+6000
+
+; Bedroom2 window (inner line) from (4600,5800)->(5400,5800)
+0
+LINE
+8
+WINDOWS
+10
+4600
+20
+5800
+11
+5400
+21
+5800
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; 5) ROOM LABELS (Layer: TEXT)
+;    - We’ll place text roughly at the center of each space.
+;    - (x,y) is insertion point.  Text height ~ 150 mm for readability.
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; Top-left bedroom
+0
+TEXT
+8
+TEXT
+10
+2000
+20
+4500
+40
+150
+1
+BEDROOM 1
+
+; Top-right bedroom
+0
+TEXT
+8
+TEXT
+10
+6000
+20
+4500
+40
+150
+1
+BEDROOM 2
+
+; Bottom-left living area
+0
+TEXT
+8
+TEXT
+10
+2000
+20
+1500
+40
+150
+1
+LIVING ROOM
+
+; Bottom-right kitchen
+0
+TEXT
+8
+TEXT
+10
+6000
+20
+1500
+40
+150
+1
+KITCHEN
+
+; You can add more text (like BATHROOM, DOORS, etc.), or dimension notes.
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+0
+ENDSEC
+0
+EOF
