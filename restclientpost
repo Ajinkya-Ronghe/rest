@@ -4,15 +4,28 @@ import java.util.*;
 
 public class RestClient {
     public static void main(String[] args) {
-        String url = "http://localhost:8081/";
+        String url = "http://localhost:8081/alerts/addAll";
 
         // Define headers
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.setBasicAuth("r"); // Replace with actual credentials
+        headers.setBasicAuth("U3lZWRtaW46SW5meTEyMysr"); // Replace with actual credentials
 
         // Define request body
-        String requestBody = "["
+        String requestBody = "[{\"categoryName\": \"VM Monitoring\","
+                + "\"sourceType\": \"Linux Server\","
+                + "\"affectedResources\": [{"
+                + "\"resourceName\": \"Apache\","
+                + "\"resourceType\": \"VPC\","
+                + "\"application\": \"TestAlert\","
+                + "\"environment\": \"Production\""
+                + "}],"
+                + "\"createdBy\": \"SYSADMIN\","
+                + "\"source\": \"Expressjs\","
+                + "\"description\": \"CRITICAL - DISK USAGE1\","
+                + "\"severity\": \"CRITICAL\","
+                + "\"alertName\": \"Windows_Disk_Usage_Critical\""
+                + "}]";
 
         // Create HTTP request entity
         HttpEntity<String> requestEntity = new HttpEntity<>(requestBody, headers);
