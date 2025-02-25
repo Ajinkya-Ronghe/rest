@@ -1,0 +1,30 @@
+import org.springframework.http.*;
+import org.springframework.web.client.RestTemplate;
+import java.util.*;
+
+public class RestClient {
+    public static void main(String[] args) {
+        String url = "http://localhost:8081/";
+
+        // Define headers
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBasicAuth("r"); // Replace with actual credentials
+
+        // Define request body
+        String requestBody = "["
+
+        // Create HTTP request entity
+        HttpEntity<String> requestEntity = new HttpEntity<>(requestBody, headers);
+
+        // Create RestTemplate instance
+        RestTemplate restTemplate = new RestTemplate();
+
+        // Send request
+        ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, requestEntity, String.class);
+
+        // Print response
+        System.out.println("Response: " + response.getStatusCode());
+        System.out.println("Response Body: " + response.getBody());
+    }
+}
