@@ -1,0 +1,82 @@
+### MetLife Registration Process - Detailed Technical Documentation
+
+#### Overview:
+The MetLife registration process involves multiple complex interactions between various systems, APIs, and databases to securely validate and register users. Below is a detailed breakdown of the registration workflow and underlying technical components involved.
+
+#### Initial Registration:
+Users receive a vanity URL via email or direct postal mail from their employer or MetLife, directing them to register their online account. The vanity URL is temporary and redirects users to a general online portal (`online.metlife.com`). Users can also directly access registration via the "Register Now" button on MetLife’s main website.
+
+#### User Categories:
+1. **Group Benefits Users**: Employees registering through their employer-provided benefits.
+2. **Retail Account Users**: Individuals who purchased MetLife products directly.
+3. **Group Policy Owners**: Owners of group policies, distinct from individual insured members.
+
+#### Registration Workflow:
+1. **Employer Search & Selection**:
+   - Users search and select their employer, redirecting to a dedicated employer page.
+
+2. **Registration Form (ULT Registration Application)**:
+   - **Personal Information**: Users enter basic details (name, email, phone, DOB, zip, state).
+   - **Dynamic Fields**: The bottom fields change based on employer configurations and could include Employee ID or SSN as identifiers.
+
+3. **Account Linking**:
+   - MetLife validates the user-provided identifier (Employee ID or SSN).
+   - Queries backend databases (MetLife Data Hub, MDS Solar collection) to validate user uniqueness.
+   - If multiple records match, further validation is performed using DOB. Persistent ambiguity halts registration.
+
+4. **Risk Profiling & Security Checks**:
+   - Third-party risk assessment via IDDataWeb through MetLife Identity Services (MIS).
+   - Evaluations include checks against public databases, credit bureaus, and fraud indicators.
+
+5. **Multi-Factor Authentication (MFA)**:
+   - Users select the MFA method (SMS or Voice).
+   - MFA delivery managed by IDDataWeb.
+
+6. **Credential Creation**:
+   - Users create a username/password.
+   - Must agree to Terms of Use and Electronic Consent Policy.
+
+#### Technical API Integrations:
+- **Channel API**:
+  - Consolidates and processes registration payload.
+  - Creates profiles across multiple backend systems (IBSC, EDPM).
+  - Manages updates to user profiles and linked accounts.
+
+- **MIS (MetLife Identity Services)**:
+  - Interfaces with IBSC via LDAP for authentication and profile updates.
+  - Provides secure and reliable user identification services.
+
+- **IBSC (Identity & Benefit Services Component)**:
+  - Stores user profiles and login credentials.
+  - Profiles created/updated by MIS.
+
+- **EDPM (Electronic Document Profile Management)**:
+  - Stores detailed user profiles, managing post-login experience.
+  - Profiles created or updated based on user input.
+
+#### Backend Data Management:
+- **Eligibility Files**:
+  - Contain user-benefit eligibility data from employers.
+  - Required for non-public registration scenarios.
+
+- **Cosmos DB**:
+  - Central database storing user eligibility and profile data.
+
+#### SiteMinder Session Management:
+- Successful registration initiates an automatic session with SiteMinder.
+- Users automatically redirected to their respective dashboards (employee, employer, or pet portal) based on profile type.
+
+#### Special Considerations:
+- Employee IDs internally handled as SSNs by certain backend services for uniformity.
+- Public vs Non-public registration scenarios clearly distinguished by eligibility data availability.
+
+#### Error Handling & Logging:
+- Specific error codes logged for scenarios like multiple records found, failed validations, or API call failures.
+- WebTech teams review error logs for resolution and user communication.
+
+#### Registration Completion & Post-Registration:
+- Upon completion, users automatically redirected to a dashboard.
+- Users encountering partial registration receive limited temporary access, prompting further action.
+
+This structured process ensures a secure, validated, and user-friendly registration experience.
+

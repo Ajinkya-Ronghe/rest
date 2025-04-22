@@ -1,0 +1,124 @@
+**Detailed Documentation: SAML SSO Flow to MetLife MyBenefits & GSSP**
+
+---
+
+### 1. Introduction
+This document provides an in-depth explanation of the SAML Single Sign-On (SSO) implementation to MetLife's MyBenefits portal and the GSSP application. It includes the logical flow, architecture components, payload validation, and the redirection steps involved.
+
+---
+
+### 2. Stakeholders and Entities
+- **TPA/Customer**: Initiates SSO request by clicking a link hosted outside MetLife's network.
+- **MetLife Federation (SiteMinder)**: Handles SAML assertions and authentication.
+- **MyBenefits**: Resolves routing and determines if the user should land on MetOnline or GSSP.
+- **MGTAS (MetLife Global Trusted Authentication System)**: Loads user data dynamically from internal stores.
+- **Group LDAP**: Stores static group IDs and user entries for authentication.
+- **Cosmos DB/Profile DB**: Central repository for user eligibility data.
+- **MetOnline / GSSP**: Target platforms for the authenticated session.
+
+---
+
+### 3. High-Level Flow Overview
+
+
+
+1. **User Action**: Clicks on an SSO-enabled link on the TPA/Customer Application.
+2. **Initial SAML Request**: Sent to MetLife Federation with a RelayState `mybenefits`.
+3. **MetLife Federation (1st call)**:
+   - Validates SAML and static group-level identifier (e.g., a shared static user configured in LDAP).
+   - Ensures trusted SAML connection metadata (X.509 cert, Issuer, etc.).
+4. **Routing to MyBenefits** (`FederationAccess.do`) resolves group configuration.
+5. **MGTAS (initSSO)**:
+   - Looks up user via `Group Number + Employee ID` in Cosmos DB/Profile DB.
+   - Loads the user dynamically into Group LDAP.
+6. **MetLife Federation (2nd call)**:
+   - Re-validates SAML now with the actual user.
+   - Checks LDAP for the newly created user entry.
+7. **Redirection to Target App**: MetOnline or GSSP, based on configuration.
+
+---
+
+### 4. Payload & SAML Assertion
+
+
+
+From screenshot:
+- **Issuer**: `ba.metlife.com`
+- **Destination**: `https://ssofed-ca.metlife.com/.../saml2assertionconsumer`
+- **NameID**: Format is `entity`
+- **Signature**:
+  - Signed with X.509 certificate (MetLife's root CA)
+  - Algorithms: SHA1, RSA-SHA1
+- **AudienceRestriction**: Ensures token is only valid for `federation:metlife`
+
+This SAML contains attributes like:
+- `GroupNumber`
+- `EmployeeID`
+- `SSN` (sometimes encoded as part of the NameID)
+- These are then decoded and matched in MGTAS to retrieve user metadata.
+
+---
+
+### 5. Test Simulation (TA Application)
+
+![TA Application - SAML Inbound Test Page](sandbox:/mnt/data/1d5a7163-c921-4696-aa51-e7686ceaeb86.png)
+
+Screenshot of TA App shows form with:
+- `Application ID`: e.g. MetOnline
+- `Group Customer Number`: e.g. Mercer
+- `Employee ID`, `Product Code`, etc.
+- Submitting simulates actual SSO initiation.
+
+---
+
+### 6. Live Example - Edward Jones Group
+
+From UI and DevTools:
+- User is redirected via:
+  - `saml2assertionconsumer`
+  - `initSSO`
+  - `tlogin`
+- Assertion is processed
+- Final landing on dashboard with welcome message: _"Hi, Bichele. Welcome back."_
+
+
+DevTools confirms:
+- Payload is a SAML Response
+- Contains encoded NameID, attributes
+- Sent to assertion consumer service and matched by MGTAS
+
+---
+
+### 7. MyBenefits Admin Portal
+
+
+Configuration UI for Edward Jones Group shows:
+- SSO Enabled via **Trusted Authentication** flag
+- Multiple products assigned: STD, LTD, PFL, Claims, Access Portal, etc.
+
+---
+
+### 8. Ping Future Architecture (Planned)
+
+Ping will replace SiteMinder:
+- First-time user: Ping Directory lookup fails → Calls new **Ping API** → loads user
+- Subsequent logins: Ping finds user in directory → direct auth → MetOnline/GSSP
+- Removes dependency on MGTAS
+
+---
+
+### 9. Security & Validation
+- Metadata Exchange: Each customer has a 1-to-1 connection configured via SAML metadata.
+- Certificates, Issuer, Entity ID are validated on both ends.
+- Group-level LDAP entries used for initial trust bootstrap.
+- MGTAS guarantees identity resolution using secure backend lookups.
+
+---
+
+### 10. Summary
+This SSO setup provides:
+- **Seamless user login experience**
+- **High security via SAML 2.0** and **X.509 certificates**
+- **Extensible architecture** that integrates legacy SiteMinder and modern Ping Federation
+- A robust and scalable way to support both external customer groups and internal MetLife flows.
+

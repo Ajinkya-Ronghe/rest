@@ -1,0 +1,50 @@
+SSO Migration - MyBenefits to PingFederate Architecture Documentation
+
+Page 1: MyBenefits Administration - Group Search
+This screenshot shows the initial search screen of the MyBenefits Admin tool. Admins use this to fetch group details by MyBenefits Case/CDF Number, Feed Number, or Group Name. This is typically the starting point to investigate a group's configuration.
+
+Page 2: Group Info Configuration - Registration Tab
+This screen allows configuration of employee and dependent policies, along with user registration rules like password policy, username structure, and email requirements. This governs how users sign into the portal.
+
+Page 3: Continued Registration Settings
+Additional parameters include Trusted Authentication options and eSignature settings. Important for determining external (TPA) user access to MyBenefits and the logic for validating trusted clients.
+
+Page 4: Trusted Authentication and Profile Setup
+The setup screen shows configuration for third-party administration (TPA), with PingFederate acting as the gateway. Here, customer-specific text and links (like timeout or unauthorized messages) are mapped. It also defines SAML profile identifiers.
+
+Page 5: MetLife Portal Welcome Screen
+This is the user-facing landing page for authenticated users returning to the MetLife platform. This UI will soon be upgraded for a modernized experience.
+
+Page 6: eDelivery Modal Prompt
+Upon login, users are prompted to opt into digital document delivery. This screen helps MetLife push users toward a paperless experience.
+
+Page 7: Single Sign-On Admin - Locate User
+Admin interface used for searching and locating users in the SSO ecosystem. It supports search via User ID, Employer ID, Customer ID, and more.
+
+Page 8: Privacy Portal Login
+Legacy system showing direct MetLife login flow. Important for comparison against the newer PingFederate login mechanism.
+
+Page 9: User Home - Single Sign On Admin
+Displays full user profile details, including MetLife IDs, employer, email, and registration status. Admins use this to enable/disable or troubleshoot user access.
+
+Page 10: SSO Account & Product Details
+Lists key flags for the user (account, registration, legal) and associated products such as application ID, subscription details, and benefits enrollment.
+
+Page 11: PingFederate Architecture Diagram (Start)
+The high-level diagram illustrates how an external user authenticates via SAML to PingFederate. The request is validated and attributes pulled, possibly via APIM, before redirection to the target application.
+
+Page 12: Continued Flow - Attribute Validation
+Shows details like how PingFederate communicates with a REST user store and triggers APIs via Azure APIM to fetch profile data.
+
+Page 13: PingDirectory, Microservice, and CosmosDB Flow
+Highlights replication and downstream connections to PingDirectory and AKS microservices. These services store and enrich the user profile into Cosmos DB collections.
+
+Page 14: Final Architecture - Complete Diagram
+Full flow: From SAML receipt, user lookup in PingDirectory, fallback to Cosmos DB, data enrichment via microservice, and back to PingFederate. Ultimately, the user is routed to the appropriate app.
+
+Page 15: Current Legacy View - MIS Login
+Displays the existing login and profile retrieval process from IBSE, eDPM, and Profile DB. This is what the modernized PingFed+Cosmos flow aims to replace.
+
+Page 16: CosmosDB View - groupCustomerMember Collection
+Screenshot of the Cosmos DB Explorer showing how group and user data are stored in collections like groupCustomerMember, user, and userProfile. This DB is used in fallback flows to fetch user eligibility and policy info.
+
