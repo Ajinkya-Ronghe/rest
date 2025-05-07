@@ -1,0 +1,7 @@
+@echo off
+echo Keeping screen on using powercfg...
+powercfg -requests
+powercfg -requestsoverride process cmd.exe display system
+timeout /t 3600
+powercfg -requestsoverride process cmd.exe
+echo Done. Screen will now behave as per your power plan.
