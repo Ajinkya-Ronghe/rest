@@ -1,0 +1,6 @@
+Hi,<br><br>
+You received one new response from @{outputs('Get_response_details')?['responder']}.<br><br>
+<a href='https://forms.office.com/Pages/DesignPage.aspx?origin=OfficeDotCom&formId=YOUR_FORM_ID&submissions=1'
+   style='display:inline-block;padding:10px 20px;background-color:#0078d4;color:#fff;text-decoration:none;border-radius:4px;'>
+   View results
+</a>
