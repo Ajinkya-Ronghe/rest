@@ -1,32 +1,91 @@
 @echo off
 setlocal enabledelayedexpansion
 
-echo =====================================
-echo      CMD SPEED ESTIMATION (PING)
-echo =====================================
+:: ======= SETTINGS =======
+set "PING_COUNT=10"      :: how many echo requests per host
+set "PACKET_SIZE=32"     :: bytes per ping (default 32)
+:: ========================
+
+set "HOSTS=8.8.8.8 1.1.1.1 8.8.4.4"
+
+echo =========================================
+echo      PING-BASED SPEED ESTIMATOR (CMD)
+echo =========================================
+echo Pings per host : %PING_COUNT%
+echo Packet size    : %PACKET_SIZE% bytes
+echo Hosts          : %HOSTS%
 echo.
 
-:: Get average ping value from ping command
-for /f "tokens=6 delims== " %%a in ('ping 8.8.8.8 -n 5 ^| find "Average"') do set avg=%%a
+set /a totalAvgMs=0, hostCount=0, bestKbpsScaled=0
+set "bestHost="
 
-:: Remove "ms" from avg value
-set avg=%avg:ms=%
+for %%H in (%HOSTS%) do (
+  echo --- Testing %%H ---
+  for /f "delims=" %%L in ('ping -n %PING_COUNT% -l %PACKET_SIZE% %%H ^| find "Average"') do set "line=%%L"
 
-echo Average ping to 8.8.8.8: %avg% ms
-echo.
+  if not defined line (
+    echo   No summary found (host unreachable or blocked).
+    echo.
+    set "line="
+    rem continue to next host
+    goto :continueHost
+  )
 
-:: --- Calculate approximate throughput ---
-:: Ping sends 32 bytes (256 bits) per packet
-:: Total bits = 5 pings * 256 bits = 1280 bits
-set /a total_bits=256*5
-set /a total_time_ms=%avg%*5
+  rem Extract the "Average = Xms" segment from the summary line
+  for /f "tokens=3 delims=," %%A in ("!line!") do set "seg=%%A"
+  for /f "tokens=2 delims==" %%B in ("!seg!") do set "avgRaw=%%B"
 
-:: Use PowerShell to compute bits/sec and convert to kbps
-for /f %%r in ('powershell -Command "[math]::Round(%total_bits% / (%total_time_ms%/1000),2)"') do set speed_bps=%%r
-for /f %%k in ('powershell -Command "[math]::Round(%speed_bps% / 1000,2)"') do set speed_kbps=%%k
+  rem Clean up: remove spaces and "ms"
+  set "avg=!avgRaw: =!"
+  set "avg=!avg:ms=!"
 
-echo Approximate network throughput: %speed_kbps% kbps (based on ping packets)
-echo.
-echo (Very rough estimate – real download speed may differ.)
-echo =====================================
+  if "!avg!"=="" (
+    echo   Could not parse average latency.
+    echo.
+    set "line="
+    goto :continueHost
+  )
+
+  rem Compute rough throughput (kbps) from ping:
+  rem Speed_kbps ≈ (PACKET_SIZE * 8) / avg_ms
+  rem We'll keep 2 decimals by scaling *100
+  set /a kbpsScaled=(%PACKET_SIZE%*800)/!avg!
+
+  set /a whole=!kbpsScaled!/100
+  set /a frac=!kbpsScaled!%%100
+  if !frac! LSS 10 set "frac=0!frac!"
+
+  echo   Average latency : !avg! ms
+  echo   Est. throughput : !whole!.!frac! kbps  (ping-based)
+  echo.
+
+  set /a totalAvgMs+=avg
+  set /a hostCount+=1
+
+  if !kbpsScaled! GTR !bestKbpsScaled! (
+    set "bestKbpsScaled=!kbpsScaled!"
+    set "bestHost=%%H"
+  )
+
+  :continueHost
+  set "line="
+)
+
+echo =========================================
+if %hostCount% GTR 0 (
+  set /a overallAvgMs=totalAvgMs/hostCount
+  set /a bestWhole=bestKbpsScaled/100
+  set /a bestFrac=bestKbpsScaled%%100
+  if !bestFrac! LSS 10 set "bestFrac=0!bestFrac!"
+
+  echo Overall avg latency across %hostCount% host(s): !overallAvgMs! ms
+  echo Best host by est. throughput               : %bestHost%  (!bestWhole!.!bestFrac! kbps)
+) else (
+  echo No successful ping summaries to compute results.
+)
+echo =========================================
+echo Note: This estimates throughput from ICMP latency only.
+echo       It is NOT a real bandwidth test.
+echo =========================================
+
 pause
