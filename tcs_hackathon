@@ -1,0 +1,684 @@
+#!/usr/bin/env python3
+"""
+Failure Scout: Chaos Monkey AI challenge script
+
+Features:
+- Scans a target directory for microservice structure and architecture
+- Extracts service metadata from Docker, docker-compose, Kubernetes, and common build files
+- Performs lightweight static heuristics to flag failures and vulnerabilities
+- Optionally sends an AI prompt to an OpenAI-compatible API to propose failures and mitigations
+
+Usage:
+  python failure_scout.py <path> [--out-md chaos_report.md] [--out-json chaos_report.json]
+  Environment variables: AI_API_KEY (preferred) or DEEPSEEK_API_KEY
+
+Note: The AI call is optional. In environments without network access, use --offline.
+"""
+from __future__ import annotations
+
+import argparse
+import dataclasses
+import fnmatch
+import json
+import os
+import re
+import sys
+import time
+from pathlib import Path
+from typing import Any, Dict, Iterable, List, Optional, Tuple
+
+
+# ------------------------------ Data Models ------------------------------
+
+
+@dataclasses.dataclass
+class Service:
+    name: str
+    root: Path
+    language: Optional[str] = None
+    framework: Optional[str] = None
+    dockerfile: Optional[Path] = None
+    docker_image: Optional[str] = None
+    ports: List[str] = dataclasses.field(default_factory=list)
+    env: Dict[str, str] = dataclasses.field(default_factory=dict)
+    depends_on: List[str] = dataclasses.field(default_factory=list)
+    k8s_kinds: List[str] = dataclasses.field(default_factory=list)
+    endpoints: List[str] = dataclasses.field(default_factory=list)
+    deps_files: List[Path] = dataclasses.field(default_factory=list)
+    important_files: List[Path] = dataclasses.field(default_factory=list)
+
+
+@dataclasses.dataclass
+class Finding:
+    service: Optional[str]
+    severity: str  # low | medium | high | critical
+    title: str
+    detail: str
+    recommendation: str
+
+
+@dataclasses.dataclass
+class AnalysisReport:
+    root: Path
+    services: List[Service]
+    findings: List[Finding]
+    ai_recommendations: Optional[str] = None
+
+
+# ------------------------------ Utilities ------------------------------
+
+
+LANGUAGE_GLOBS = {
+    "python": ["requirements.txt", "pyproject.toml", "setup.py", "Pipfile"],
+    "node": ["package.json"],
+    "go": ["go.mod"],
+    "java": ["pom.xml", "build.gradle", "build.gradle.kts"],
+    "rust": ["Cargo.toml"],
+    "ruby": ["Gemfile"],
+    "php": ["composer.json"],
+    "dotnet": ["*.csproj", "*.fsproj", "*.vbproj"],
+}
+
+
+def read_text_safe(p: Path, limit: int = 100_000) -> str:
+    try:
+        with p.open("r", encoding="utf-8", errors="ignore") as f:
+            data = f.read(limit + 1)
+            if len(data) > limit:
+                data = data[:limit] + "\n... [truncated] ...\n"
+            return data
+    except Exception:
+        return ""
+
+
+def find_files(root: Path, patterns: Iterable[str], max_files: int = 9999) -> List[Path]:
+    out: List[Path] = []
+    for dirpath, _, filenames in os.walk(root):
+        for pat in patterns:
+            for name in filenames:
+                if fnmatch.fnmatch(name, pat):
+                    out.append(Path(dirpath) / name)
+                    if len(out) >= max_files:
+                        return out
+    return out
+
+
+def detect_language(service_root: Path) -> Tuple[Optional[str], Optional[str], List[Path]]:
+    deps: List[Path] = []
+    for lang, globs in LANGUAGE_GLOBS.items():
+        matches = find_files(service_root, globs, max_files=50)
+        if matches:
+            deps.extend(matches)
+            framework = None
+            # quick framework hints
+            if lang == "python":
+                if find_files(service_root, ["manage.py"]):
+                    framework = "django"
+                elif find_files(service_root, ["fastapi*", "uvicorn*", "app.py", "main.py"]):
+                    framework = framework or "fastapi/flask?"
+            if lang == "node":
+                pkg_json = service_root / "package.json"
+                try:
+                    if pkg_json.exists():
+                        pkg = json.loads(read_text_safe(pkg_json))
+                        deps_map = {**pkg.get("dependencies", {}), **pkg.get("devDependencies", {})}
+                        if any(k in deps_map for k in ["express", "fastify", "@nestjs/core"]):
+                            framework = "express/fastify/nest"
+                except Exception:
+                    pass
+            if lang == "go":
+                if find_files(service_root, ["*.go"]):
+                    framework = "go net/http / gin?"
+            return lang, framework, deps
+    return None, None, deps
+
+
+def extract_ports_from_dockerfile(content: str) -> List[str]:
+    ports = []
+    for line in content.splitlines():
+        m = re.search(r"EXPOSE\s+([0-9/\s]+)", line, re.IGNORECASE)
+        if m:
+            ports.extend([p.strip() for p in m.group(1).split()])
+    return ports
+
+
+def parse_compose_services(content: str) -> Dict[str, Dict[str, Any]]:
+    # Very lightweight docker-compose parser for a few fields (no YAML dep; regex-based heuristics)
+    # If PyYAML is available in venv, we can try it, else stick to regex.
+    try:
+        import yaml  # type: ignore
+
+        data = yaml.safe_load(content)
+        services = data.get("services", {}) if isinstance(data, dict) else {}
+        out: Dict[str, Dict[str, Any]] = {}
+        for sname, sdef in services.items():
+            o: Dict[str, Any] = {}
+            if isinstance(sdef, dict):
+                o["image"] = sdef.get("image")
+                o["build"] = sdef.get("build")
+                o["ports"] = sdef.get("ports", [])
+                o["environment"] = sdef.get("environment", {})
+                o["depends_on"] = list(sdef.get("depends_on", []) or [])
+            out[str(sname)] = o
+        return out
+    except Exception:
+        # Fallback: extremely rough parse that finds top-level service blocks by indentation
+        out: Dict[str, Dict[str, Any]] = {}
+        current: Optional[str] = None
+        for raw in content.splitlines():
+            line = raw.rstrip()
+            if re.match(r"^[^\s].*:", line):
+                current = None
+                continue
+            m = re.match(r"^\s{2,}([A-Za-z0-9_.-]+):\s*$", line)
+            if m and current is None:
+                current = m.group(1)
+                out[current] = {}
+                continue
+            if current:
+                if "image:" in line:
+                    out[current]["image"] = line.split(":", 1)[1].strip()
+                if re.search(r"\bports:\b", line):
+                    out[current].setdefault("ports", [])
+                if re.search(r"\bdepends_on:\b", line):
+                    out[current].setdefault("depends_on", [])
+        return out
+
+
+def find_k8s_kinds(content: str) -> List[str]:
+    kinds = []
+    for m in re.finditer(r"\bkind:\s*(Deployment|StatefulSet|DaemonSet|Service|Ingress|Job|CronJob|ConfigMap|Secret)\b",
+                         content, re.IGNORECASE):
+        kinds.append(m.group(1))
+    return list(dict.fromkeys(kinds))
+
+
+def detect_endpoints(root: Path) -> List[str]:
+    # heuristics for OpenAPI and common framework routes
+    eps: List[str] = []
+    # OpenAPI
+    for p in find_files(root, ["openapi*.yaml", "openapi*.yml", "openapi*.json", "swagger*.yaml", "swagger*.json"], 10):
+        eps.append(f"openapi:{p}")
+    # Express/Nest/Flask/FastAPI quick checks
+    for p in find_files(root, ["*.py", "*.ts", "*.js"], max_files=200):
+        txt = read_text_safe(p, limit=20_000)
+        if re.search(r"@app\.route\(|FastAPI\(|APIRouter\(|router\.get\(|router\.post\(", txt):
+            eps.append(f"routes:{p}")
+        if re.search(r"express\(\)|app\.(get|post|put|delete)\(", txt):
+            eps.append(f"routes:{p}")
+        if re.search(r"@Controller\(|@Get\(|@Post\(", txt):
+            eps.append(f"routes:{p}")
+        if len(eps) >= 20:
+            break
+    return list(dict.fromkeys(eps))
+
+
+def collect_important_files(service_root: Path, limit_per_kind: int = 3) -> List[Path]:
+    candidates = []
+    candidates += find_files(service_root, ["Dockerfile", "dockerfile"], 3)
+    candidates += find_files(service_root, ["docker-compose*.yml", "docker-compose*.yaml"], 2)
+    candidates += find_files(service_root, ["*.yaml", "*.yml"], 5)  # k8s manifests (best-effort)
+    candidates += find_files(service_root, ["README.md"], 1)
+    # Dependency files
+    for globs in LANGUAGE_GLOBS.values():
+        candidates += find_files(service_root, globs, limit_per_kind)
+    # Settings & env
+    candidates += find_files(service_root, [".env", ".env.*", "settings.py", "application.yml", "application.yaml"], 3)
+    # Trim duplicates and long paths
+    seen = []
+    for c in candidates:
+        if c not in seen:
+            seen.append(c)
+    return seen[:20]
+
+
+# ------------------------------ Heuristic Checks ------------------------------
+
+
+SECRET_PATTERNS = [
+    re.compile(r"(?i)(api[_-]?key|secret|token|password)\s*[:=]\s*['\"]?([A-Za-z0-9_\-]{16,})"),
+    re.compile(r"(?i)AWS[_-]?SECRET[_-]?ACCESS[_-]?KEY\s*=\s*([A-Za-z0-9/+=]{32,})"),
+]
+
+
+def check_service_findings(svc: Service) -> List[Finding]:
+    findings: List[Finding] = []
+    # Dockerfile checks
+    if svc.dockerfile and svc.dockerfile.exists():
+        content = read_text_safe(svc.dockerfile)
+        if re.search(r"\buser\b", content, re.IGNORECASE) is None:
+            findings.append(Finding(svc.name, "medium", "Container runs as root?",
+                                    f"Dockerfile in {svc.dockerfile} may lack USER directive.",
+                                    "Add a non-root USER and least privileges."))
+        if re.search(r"HEALTHCHECK\s+", content, re.IGNORECASE) is None:
+            findings.append(Finding(svc.name, "low", "Missing Docker HEALTHCHECK",
+                                    f"No HEALTHCHECK found in {svc.dockerfile}.",
+                                    "Add HEALTHCHECK to improve resilience and auto-restarts."))
+        if re.search(r":latest\b", content):
+            findings.append(Finding(svc.name, "medium", "Floating image tag",
+                                    "Dockerfile references :latest which is not reproducible.",
+                                    "Pin image versions for deterministic builds."))
+
+    # Compose checks (if any compose file in important files)
+    for f in svc.important_files:
+        if f.name.startswith("docker-compose") and f.suffix in {".yml", ".yaml"}:
+            composition = parse_compose_services(read_text_safe(f))
+            if svc.name in composition:
+                sdef = composition[svc.name]
+                ports = sdef.get("ports", []) or []
+                if ports:
+                    # open all ports without firewall note
+                    findings.append(Finding(svc.name, "low", "Exposed ports in compose",
+                                            f"Service exposes ports: {ports}",
+                                            "Ensure security groups/firewalls restrict access as needed."))
+                env = sdef.get("environment", {}) or {}
+                if isinstance(env, dict):
+                    for k, v in env.items():
+                        if isinstance(v, str) and len(v) > 8 and re.search(r"[A-Za-z0-9]", v):
+                            # naive secret look
+                            findings.append(Finding(svc.name, "high", f"Potential secret in compose: {k}",
+                                                    f"Value appears embedded in compose file {f}",
+                                                    "Move secrets to a secret manager or env vars injected securely."))
+
+    # Env/leak checks in important files
+    for f in svc.important_files:
+        if f.name in {".env", "application.yaml", "application.yml", "settings.py"}:
+            txt = read_text_safe(f)
+            for pat in SECRET_PATTERNS:
+                for m in pat.finditer(txt):
+                    findings.append(Finding(svc.name, "high", "Potential secret leakage",
+                                            f"{f}: {m.group(0)[:80]}...",
+                                            "Remove hardcoded secrets; use a vault and CI/CD secrets."))
+
+    # K8s checks (from k8s kinds list)
+    if any(k in {"Deployment", "StatefulSet"} for k in svc.k8s_kinds):
+        # Without parsing YAML fully, recommend common resiliency settings
+        findings.append(Finding(svc.name, "medium", "K8s probes and resources",
+                                "Ensure liveness/readiness probes and resource requests/limits are set.",
+                                "Add liveness/readiness, set resources, enable HPA if appropriate."))
+
+    # Endpoint checks
+    if svc.endpoints:
+        findings.append(Finding(svc.name, "low", "API surface detected",
+                                f"Endpoints or route files detected: {svc.endpoints[:5]}",
+                                "Verify authn/z, rate limiting, and circuit breakers."))
+
+    return findings
+
+
+# ------------------------------ AI Client ------------------------------
+
+
+def ai_chat(
+    prompt: str,
+    model: str,
+    api_key: Optional[str] = None,
+    api_base: Optional[str] = None,
+    api_path: Optional[str] = None,
+    timeout: int = 60,
+) -> str:
+    """
+    Calls an OpenAI-compatible Chat Completions API using stdlib only.
+    Defaults to the provided spec: POST {api_base}/{api_path}
+      - Example path: /openai/deployments/{model}/chat/completions
+      - Alternative:   /v1/chat/completions
+    Authorization: Bearer <API_KEY>
+    """
+    api_key = api_key or os.getenv("AI_API_KEY") or os.getenv("DEEPSEEK_API_KEY")
+    if not api_key:
+        raise RuntimeError("AI_API_KEY not set")
+    import json as _json
+    import urllib.request
+
+    api_base = (api_base or os.getenv("AI_API_BASE") or "http://localhost:4000").rstrip("/")
+    api_path = api_path or os.getenv("AI_API_PATH") or "/openai/deployments/{model}/chat/completions"
+    if "{model}" in api_path:
+        resolved_path = api_path.replace("{model}", model)
+    else:
+        resolved_path = api_path
+    url = f"{api_base}/{resolved_path.lstrip('/')}"
+
+    payload = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": "You are a senior SRE and security engineer."},
+            {"role": "user", "content": prompt},
+        ],
+        "temperature": 0.2,
+        "max_tokens": 1200,
+    }
+    data = _json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(url, data=data)
+    req.add_header("Content-Type", "application/json")
+    req.add_header("Authorization", f"Bearer {api_key}")
+    with urllib.request.urlopen(req, timeout=timeout) as resp:  # nosec
+        raw = resp.read().decode("utf-8", errors="ignore")
+    obj = json.loads(raw)
+    try:
+        return obj["choices"][0]["message"]["content"].strip()
+    except Exception:
+        return raw[:4000]
+
+
+def build_ai_prompt(report: AnalysisReport, sample_text_budget: int = 8000) -> str:
+    parts: List[str] = []
+    parts.append("Objective: Propose chaos experiments, detect likely failures and security risks, and provide actionable fixes.")
+    parts.append(f"Root: {report.root}")
+    parts.append("\nArchitecture Summary:")
+    for s in report.services:
+        parts.append(f"- Service: {s.name}\n  Path: {s.root}\n  Lang: {s.language or '?'} ({s.framework or '?'})\n  Dockerfile: {s.dockerfile or '-'}\n  Image: {s.docker_image or '-'}\n  Ports: {', '.join(s.ports) if s.ports else '-'}\n  DependsOn: {', '.join(s.depends_on) if s.depends_on else '-'}\n  K8s: {', '.join(s.k8s_kinds) if s.k8s_kinds else '-'}\n  EndpointsHints: {', '.join(s.endpoints) if s.endpoints else '-'}")
+
+    parts.append("\nHeuristic Findings:")
+    for f in report.findings:
+        parts.append(f"- [{f.severity}] {f.service or 'global'}: {f.title} -> {f.detail}")
+
+    # Include sampled file snippets for more context
+    parts.append("\nSampled Files (snippets):")
+    budget_left = sample_text_budget
+    for s in report.services:
+        for f in s.important_files[:6]:
+            txt = read_text_safe(f, limit=min(2000, budget_left))
+            if not txt:
+                continue
+            snippet = txt[: min(1000, budget_left)]
+            parts.append(f"\n----- BEGIN {f} -----\n{snippet}\n----- END {f} -----")
+            budget_left -= len(snippet)
+            if budget_left <= 0:
+                break
+        if budget_left <= 0:
+            break
+
+    parts.append(
+        "\nPlease return:\n" \
+        "1) A prioritized list of chaos experiments per service (with exact failure modes to inject).\n" \
+        "2) Probable failure points and security issues specific to this repo, with evidence.\n" \
+        "3) Actionable mitigations and step-by-step fixes.\n" \
+        "4) A summary table of risks by severity.\n"
+    )
+    return "\n".join(parts)
+
+
+# ------------------------------ Scanning Logic ------------------------------
+
+
+SERVICE_ROOT_HINTS = [
+    "Dockerfile",
+    "dockerfile",
+    "package.json",
+    "requirements.txt",
+    "pyproject.toml",
+    "go.mod",
+    "pom.xml",
+    "build.gradle",
+    "build.gradle.kts",
+    "Cargo.toml",
+    "Gemfile",
+    "composer.json",
+]
+
+
+def is_probable_service_dir(p: Path) -> bool:
+    for hint in SERVICE_ROOT_HINTS:
+        if (p / hint).exists():
+            return True
+    return False
+
+
+def derive_service_name(p: Path, compose_services: Dict[str, Dict[str, Any]]) -> str:
+    # Try matching by folder name or compose key
+    folder = p.name
+    if folder in compose_services:
+        return folder
+    # Else best-effort
+    return folder
+
+
+def scan_repository(root: Path, include: Optional[List[str]] = None, exclude: Optional[List[str]] = None) -> AnalysisReport:
+    include = include or []
+    exclude = exclude or [".git", ".venv", "node_modules", "dist", "build", "target", "bin", "obj"]
+
+    compose_services_all: Dict[str, Dict[str, Any]] = {}
+    compose_files = find_files(root, ["docker-compose*.yml", "docker-compose*.yaml"], 5)
+    for cf in compose_files:
+        compose_services_all.update(parse_compose_services(read_text_safe(cf)))
+
+    # Identify service roots: either subdirs matching hints or root itself
+    candidates = []
+    for dirpath, dirnames, filenames in os.walk(root):
+        rel = Path(dirpath).relative_to(root)
+        # skip excluded
+        if any(part in exclude for part in rel.parts):
+            continue
+        # Optional include filters
+        if include and not any(fnmatch.fnmatch(str(rel), pat) for pat in include):
+            continue
+        p = Path(dirpath)
+        if is_probable_service_dir(p):
+            candidates.append(p)
+
+    # De-duplicate nested dirs: prefer deepest-level service directories as individual services
+    service_dirs: List[Path] = []
+    candidates_sorted = sorted(candidates, key=lambda x: len(x.parts))
+    taken: List[Path] = []
+    for c in candidates_sorted:
+        if not any(str(c).startswith(str(t) + os.sep) for t in taken):
+            service_dirs.append(c)
+            taken.append(c)
+
+    services: List[Service] = []
+    for sroot in service_dirs or [root]:
+        name = derive_service_name(sroot, compose_services_all)
+        lang, framework, deps_files = detect_language(sroot)
+        dockerfile = None
+        df_candidates = find_files(sroot, ["Dockerfile", "dockerfile"], 1)
+        if df_candidates:
+            dockerfile = df_candidates[0]
+        ports: List[str] = []
+        if dockerfile:
+            ports = extract_ports_from_dockerfile(read_text_safe(dockerfile))
+
+        k8s_kinds: List[str] = []
+        for k8s in find_files(sroot, ["*.yaml", "*.yml"], 50):
+            txt = read_text_safe(k8s, limit=30_000)
+            if "apiVersion:" in txt and "kind:" in txt:
+                kinds = find_k8s_kinds(txt)
+                if kinds:
+                    k8s_kinds.extend(kinds)
+
+        endpoints = detect_endpoints(sroot)
+        important = collect_important_files(sroot)
+
+        svc = Service(
+            name=name,
+            root=sroot,
+            language=lang,
+            framework=framework,
+            dockerfile=dockerfile,
+            ports=ports,
+            k8s_kinds=list(dict.fromkeys(k8s_kinds)),
+            endpoints=endpoints,
+            deps_files=deps_files,
+            important_files=important,
+        )
+
+        # Compose linking
+        if name in compose_services_all:
+            sdef = compose_services_all[name]
+            if isinstance(sdef.get("ports"), list):
+                svc.ports.extend([str(p) for p in sdef.get("ports", [])])
+            if sdef.get("image"):
+                svc.docker_image = str(sdef.get("image"))
+            if sdef.get("depends_on"):
+                svc.depends_on = [str(x) for x in sdef.get("depends_on")]
+
+        services.append(svc)
+
+    findings: List[Finding] = []
+    for svc in services:
+        findings.extend(check_service_findings(svc))
+
+    return AnalysisReport(root=root, services=services, findings=findings)
+
+
+# ------------------------------ Chaos Experiments ------------------------------
+
+
+def propose_local_experiments(report: AnalysisReport) -> str:
+    lines: List[str] = []
+    lines.append("Chaos Experiments (Heuristic)")
+    lines.append("")
+    for s in report.services:
+        lines.append(f"- Service: {s.name}")
+        lines.append("  - Kill: Terminate pod/container instance; assert auto-recovery")
+        lines.append("  - CPU Spike: Stress to 80-90% for 5m; validate SLOs")
+        lines.append("  - Memory Pressure: Limit memory; observe OOM handling")
+        lines.append("  - Latency Injection: +200-500ms on downstream calls")
+        lines.append("  - Network Partition: Drop egress to dependencies: " + (", ".join(s.depends_on) or "unknown"))
+        if s.ports:
+            lines.append("  - Port Block: Block service port(s) " + ", ".join(map(str, s.ports)))
+        if s.k8s_kinds:
+            lines.append("  - K8s Probe Failure: Fail liveness/readiness to test rollout")
+        if s.endpoints:
+            lines.append("  - Rate Limit: Flood top endpoints; validate throttling and backoff")
+        lines.append("  - Secret Rotation: Rotate creds; watch config reload")
+        lines.append("  - Disk Fill: Fill /tmp to 95%; check graceful failure")
+        lines.append("")
+    return "\n".join(lines)
+
+
+# ------------------------------ Output Helpers ------------------------------
+
+
+def to_json(report: AnalysisReport) -> Dict[str, Any]:
+    return {
+        "root": str(report.root),
+        "services": [
+            {
+                "name": s.name,
+                "root": str(s.root),
+                "language": s.language,
+                "framework": s.framework,
+                "dockerfile": str(s.dockerfile) if s.dockerfile else None,
+                "docker_image": s.docker_image,
+                "ports": s.ports,
+                "env": s.env,
+                "depends_on": s.depends_on,
+                "k8s_kinds": s.k8s_kinds,
+                "endpoints": s.endpoints,
+                "deps_files": [str(p) for p in s.deps_files],
+                "important_files": [str(p) for p in s.important_files],
+            }
+            for s in report.services
+        ],
+        "findings": [
+            {
+                "service": f.service,
+                "severity": f.severity,
+                "title": f.title,
+                "detail": f.detail,
+                "recommendation": f.recommendation,
+            }
+            for f in report.findings
+        ],
+        "ai_recommendations": report.ai_recommendations,
+    }
+
+
+def to_markdown(report: AnalysisReport) -> str:
+    lines: List[str] = []
+    lines.append(f"# Chaos Monkey AI Report\n")
+    lines.append(f"Root: `{report.root}`\n")
+    lines.append("## Architecture Summary\n")
+    for s in report.services:
+        lines.append(f"### {s.name}\n")
+        lines.append(f"- Path: `{s.root}`")
+        lines.append(f"- Lang/Framework: {s.language or '-'} / {s.framework or '-'}")
+        lines.append(f"- Dockerfile: `{s.dockerfile}`")
+        lines.append(f"- Image: {s.docker_image or '-'}")
+        lines.append(f"- Ports: {', '.join(s.ports) if s.ports else '-'}")
+        lines.append(f"- Depends On: {', '.join(s.depends_on) if s.depends_on else '-'}")
+        lines.append(f"- K8s Kinds: {', '.join(s.k8s_kinds) if s.k8s_kinds else '-'}")
+        if s.endpoints:
+            lines.append(f"- Endpoint Hints: {', '.join(s.endpoints[:8])}")
+        if s.important_files:
+            lines.append("- Important Files:")
+            for p in s.important_files[:6]:
+                lines.append(f"  - `{p}`")
+        lines.append("")
+
+    lines.append("## Findings\n")
+    if not report.findings:
+        lines.append("- No heuristic issues found.")
+    else:
+        for f in report.findings:
+            lines.append(f"- [{f.severity.upper()}] {f.service or 'global'}: {f.title} – {f.detail}")
+            lines.append(f"  - Fix: {f.recommendation}")
+
+    lines.append("\n## Local Chaos Experiments\n")
+    lines.append(propose_local_experiments(report))
+
+    if report.ai_recommendations:
+        lines.append("\n## AI Recommendations\n")
+        lines.append(report.ai_recommendations)
+
+    return "\n".join(lines)
+
+
+# ------------------------------ CLI ------------------------------
+
+
+def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
+    p = argparse.ArgumentParser(description="Chaos Monkey AI challenge script")
+    p.add_argument("path", help="Path to repo root to analyze")
+    p.add_argument("--include", nargs="*", default=None, help="Optional include patterns for subpaths")
+    p.add_argument("--exclude", nargs="*", default=None, help="Exclude folder names (e.g., .venv node_modules)")
+    p.add_argument("--out-md", default=None, help="Write Markdown report to this file")
+    p.add_argument("--out-json", default=None, help="Write JSON report to this file")
+    p.add_argument("--ai", action="store_true", help="Call AI API for recommendations")
+    p.add_argument("--deepseek", action="store_true", help="Alias for --ai (back-compat)")
+    p.add_argument("--model", default="gpt-4o", help="Model/deployment name")
+    p.add_argument("--api-base", default=None, help="API base URL (default env AI_API_BASE or http://localhost:4000)")
+    p.add_argument("--api-path", default=None, help="API path (e.g. /openai/deployments/{model}/chat/completions or /v1/chat/completions)")
+    p.add_argument("--api-key", default=None, help="API key (default env AI_API_KEY)")
+    p.add_argument("--offline", action="store_true", help="Disable network calls (force local only)")
+    return p.parse_args(argv)
+
+
+def main(argv: Optional[List[str]] = None) -> int:
+    args = parse_args(argv)
+    root = Path(args.path).resolve()
+    if not root.exists() or not root.is_dir():
+        print(f"Path not found or not a directory: {root}", file=sys.stderr)
+        return 2
+
+    report = scan_repository(root=root, include=args.include, exclude=args.exclude)
+
+    # Optional AI call
+    if (args.ai or args.deepseek) and not args.offline:
+        prompt = build_ai_prompt(report)
+        try:
+            ai_text = ai_chat(
+                prompt,
+                model=args.model,
+                api_key=args.api_key,
+                api_base=args.api_base,
+                api_path=args.api_path,
+            )
+        except Exception as e:
+            ai_text = f"[AI call failed: {e}]"
+        report.ai_recommendations = ai_text
+
+    # Output
+    md = to_markdown(report)
+    print(md)
+
+    if args.out_md:
+        Path(args.out_md).write_text(md, encoding="utf-8")
+    if args.out_json:
+        Path(args.out_json).write_text(json.dumps(to_json(report), indent=2), encoding="utf-8")
+
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
