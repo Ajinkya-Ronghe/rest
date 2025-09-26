@@ -44,16 +44,6 @@ Differentiators
 
 
 
-Principles
-
-Safety & Reliability: Scope-limited static analysis, deterministic heuristics, timeouts and error handling around AI calls, and an offline mode to avoid external dependency.
-Privacy & Security: Data minimization in prompts, local processing by default, no on-disk storage of AI responses unless user exports, API key via env var, and secret-leak detection to prevent unintended exfiltration.
-Transparency: Clear indication when AI is used, model/endpoint shown in CLI flags and UI defaults, human-readable Markdown/JSON reports with evidence lines and suggested fixes.
-Fairness & Non‑Discrimination: Technical findings avoid sensitive attributes; heuristics focus on config/code, not people or protected classes.
-Accountability & Human Oversight: Findings and AI suggestions are recommendations, not automated changes; users review and decide. Explicit error messages and provenance (file paths) enable verification.
-Inclusiveness & Accessibility: CLI and Streamlit UI, readable report format, low-friction setup with minimal dependencies.
-Security-by-Design: No keys in code; supports TLS; optional SSL verification toggle for controlled proxies; recommends vault usage and CI/CD secrets management.
-Sustainability: Token and snippet budgets to limit API usage; offline mode to reduce compute and cost.
 How the App Adheres (today)
 
 Data minimization: build_ai_prompt samples only small snippets and limits total characters via a budget slider in the UI.
