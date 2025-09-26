@@ -37,3 +37,53 @@ Security/Compliance: Continuous scanning surfaces policy violations early with f
 App Teams: Clear, actionable fixes integrated into PR/CI context.
 Leadership: Improved reliability metrics and auditability with lower incident frequency.
 Differentiators
+
+
+
+
+
+
+
+Principles
+
+Safety & Reliability: Scope-limited static analysis, deterministic heuristics, timeouts and error handling around AI calls, and an offline mode to avoid external dependency.
+Privacy & Security: Data minimization in prompts, local processing by default, no on-disk storage of AI responses unless user exports, API key via env var, and secret-leak detection to prevent unintended exfiltration.
+Transparency: Clear indication when AI is used, model/endpoint shown in CLI flags and UI defaults, human-readable Markdown/JSON reports with evidence lines and suggested fixes.
+Fairness & Non‑Discrimination: Technical findings avoid sensitive attributes; heuristics focus on config/code, not people or protected classes.
+Accountability & Human Oversight: Findings and AI suggestions are recommendations, not automated changes; users review and decide. Explicit error messages and provenance (file paths) enable verification.
+Inclusiveness & Accessibility: CLI and Streamlit UI, readable report format, low-friction setup with minimal dependencies.
+Security-by-Design: No keys in code; supports TLS; optional SSL verification toggle for controlled proxies; recommends vault usage and CI/CD secrets management.
+Sustainability: Token and snippet budgets to limit API usage; offline mode to reduce compute and cost.
+How the App Adheres (today)
+
+Data minimization: build_ai_prompt samples only small snippets and limits total characters via a budget slider in the UI.
+Control of outbound data: Offline mode (--offline) fully disables network; Streamlit enforces AI usage but still respects env-driven gateway and budgets.
+Secret hygiene: Heuristics flag possible secrets in .env/configs before sending; gateway key required via AI_API_KEY env (never written to files).
+User control: Include/exclude patterns supported in CLI; UI allows choosing the folder (defaults to the bundled sample).
+Fail safe: Network and model errors return readable failures and keep the report usable.
+Config & Controls You Can Enable
+
+Redaction: Add masking prior to prompt assembly for high-risk keys (e.g., patterns like password|secret|token).
+Allow/Deny Lists: Restrict which file types and paths can be sampled into prompts (tests, migrations, vendor dirs excluded by default).
+Prompt Budgets: Keep sample_text_budget conservative; lower it for sensitive repos.
+Network Boundaries: Point AI_API_BASE to your internal GenAI gateway; set AI_SSL_NO_VERIFY=0 in production; log mTLS at the proxy.
+Access Control: Run the app under least-privilege and read-only repo access in CI; rotate AI_API_KEY regularly.
+Risks & Mitigations
+
+Leakage Risk: Prompts may include secrets if present in code. Mitigate with redaction, allowlists, and pre-scan secret checks (already included).
+Hallucination/Overreach: AI suggestions may be incorrect. Keep human-in-the-loop review and tie advice to evidence lines.
+Vendor Lock/Policy Drift: Gateway constraints or model renames. The client handles model aliasing and fails gracefully; keep policies pinned and monitored.
+Compliance (PII/IP): Only scan repos you’re authorized to scan; avoid uploading proprietary data beyond approved gateways.
+Operational Practices
+
+Logging: Log actions and parameters (not content) for audit; avoid logging keys or prompt contents.
+Retention: Do not store AI responses by default; user explicitly downloads reports if desired.
+Testing & Evals: Keep unit tests for redaction and secret detection; periodically red-team prompts with seeded secrets to validate guardrails.
+Documentation: State AI usage, data flow, and limitations in README and user docs; provide a change log for model/endpoint changes.
+Next Enhancements
+
+Add redaction middleware for prompts with configurable patterns.
+Add an allowlist/denylist config file for promptable paths.
+Provide a SARIF output for CI with severity gating and policy exceptions.
+Add privacy mode that disables code snippets and uses only metadata.
+Add automated DSR support doc and data flow diagram for governance packs.
