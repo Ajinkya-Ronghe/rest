@@ -1,0 +1,10 @@
+Overview
+
+Purpose: Analyze a microservices codebase, surface likely failure modes and security risks, and generate chaos-engineering experiments with optional AI assistance.
+Modes: CLI for quick reports, Streamlit UI for interactive analysis, and a pluggable AI client targeting your GenAI Lab gateway.
+Key Features
+
+Architecture discovery: Detects services via Dockerfiles, dependency manifests, docker-compose, and Kubernetes manifests.
+Heuristic findings: Flags common risks (root containers, missing HEALTHCHECK, exposed ports, hardcoded secrets, missing k8s probes/resources).
+Chaos suggestions: Proposes per-service experiments (kill, CPU/memory pressure, latency, network partition, disk fill, credential rotation).
+AI recommendations: Builds a context-rich prompt and queries your GenAI Lab endpoint for prioritized failures and fixes.
