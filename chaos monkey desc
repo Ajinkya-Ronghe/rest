@@ -8,3 +8,32 @@ Architecture discovery: Detects services via Dockerfiles, dependency manifests, 
 Heuristic findings: Flags common risks (root containers, missing HEALTHCHECK, exposed ports, hardcoded secrets, missing k8s probes/resources).
 Chaos suggestions: Proposes per-service experiments (kill, CPU/memory pressure, latency, network partition, disk fill, credential rotation).
 AI recommendations: Builds a context-rich prompt and queries your GenAI Lab endpoint for prioritized failures and fixes.
+
+
+
+
+
+
+
+Challenges:
+Microservice Complexity: Dozens of services, configs, and manifests make risk discovery slow and error‑prone.
+Hidden Misconfigurations: Root containers, missing health checks, floating tags, and weak k8s settings often slip past reviews.
+Secret Leakage: Hardcoded tokens in env/configs and compose files create silent security exposure.
+Limited Chaos Adoption: Teams lack time and guidance to design meaningful, safe chaos experiments.
+Siloed Knowledge: Architecture context lives in people/docs; onboarding and audits are inconsistent.
+Reactive Posture: Failures are found in production instead of being probed early in CI/CD.
+
+Business Opportunities:
+Proactive Resilience: Auto-generate targeted chaos experiments to validate SLOs before incidents.
+Security Posture Improvement: Early detection of leaked secrets and insecure defaults reduces breach risk.
+Faster Audits & Compliance: One-click architecture summaries and findings accelerate SOC2/ISO/PCI evidence.
+Developer Productivity: Self-serve insights reduce SRE bottlenecks and shorten onboarding to complex stacks.
+Cost Optimization: Identify waste (e.g., missing limits, unnecessary exposures) and reduce incident-driven costs.
+Platform Offerings: Package as an internal DevEx tool or external SaaS add-on for platform engineering.
+
+Who Benefits:
+SRE/Platform Teams: Automated checks and chaos recipes reduce toil and increase coverage.
+Security/Compliance: Continuous scanning surfaces policy violations early with fix guidance.
+App Teams: Clear, actionable fixes integrated into PR/CI context.
+Leadership: Improved reliability metrics and auditability with lower incident frequency.
+Differentiators
