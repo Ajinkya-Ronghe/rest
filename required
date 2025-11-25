@@ -1,0 +1,5 @@
+treat cdf customer number as cdf customer number
+
+cdf tpa number should not be mandatory(new tpa and customer via tpa/tpe)
+
+Need to ask boo what will happen i case of customer via tpa tpe in backend for connection.
