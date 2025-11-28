@@ -1,0 +1,242 @@
+Here are the basic Java + Spring Boot evaluation questions for 3-year-experience candidates along with practical, expected answers.
+👉 Focused on real implementation explanation, not just theoretical definitions — exactly what an interviewer expects at 3 years.
+🟢 Core Java – With Answers
+1. Difference between String, StringBuilder, and StringBuffer?
+String → Immutable, creates new object if modified.
+StringBuilder → Mutable, faster, not thread-safe.
+StringBuffer → Mutable, thread-safe (synchronized), slower.
+Prefer StringBuilder unless multi-threaded environment.
+2. equals() vs == and when to override hashCode()?
+== → Compares reference.
+equals() → Compares values (if overridden).
+Must override hashCode() when overriding equals() to maintain integrity when used inside hash-based collections (like HashMap, HashSet).
+3. What is a functional interface?
+An interface with only one abstract method. Example:
+Copy code
+Java
+@FunctionalInterface
+interface Calculator {
+    int add(int a, int b);
+}
+Can be used with lambda expressions.
+4. How does ConcurrentHashMap work?
+It divides the map into multiple segments to reduce locking. Prior to Java 8 it used Segment Locking, now it uses CAS (Compare-And-Swap) and locks only affected buckets.
+5. What is immutability?
+Class whose state cannot change after creation.
+Copy code
+Java
+public final class Employee {
+    private final String name;
+    public Employee(String name) { this.name = name; }
+    public String getName() { return name; }
+}
+6. Checked vs Unchecked exception?
+Checked: Must handle (IOException, SQLException).
+Unchecked: Runtime exceptions (NullPointerException, IllegalArgumentException).
+7. final, finally, finalize()?
+Keyword
+Purpose
+final
+Constant / prevent override
+finally
+Block that always runs
+finalize()
+Called before GC (now deprecated)
+8. What is ExecutorService?
+Manages thread pool – avoids creating separate threads each time.
+Copy code
+Java
+ExecutorService executor = Executors.newFixedThreadPool(10);
+executor.submit(() -> System.out.println("Task"));
+executor.shutdown();
+9. How does Garbage Collection work?
+Automatic memory management using algorithms like mark and sweep. You can trigger hint using System.gc(), but the JVM decides.
+10. What is Optional?
+Used to avoid NullPointerException.
+Copy code
+Java
+Optional.ofNullable(name).orElse("Default")
+🟠 Spring Boot / Spring Core – With Answers
+1. Difference between @Component, @Service, @Repository, @Controller?
+Annotation
+Usage
+@Component
+Generic bean
+@Service
+Business layer
+@Repository
+DAO layer (adds exception translation)
+@Controller
+Web layer
+2. What is Dependency Injection?
+Spring automatically provides required objects instead of the programmer creating them.
+3. Bean lifecycle?
+Instantiate
+Populate properties
+@PostConstruct
+Use bean
+@PreDestroy
+Destroy
+4. What is @Autowired?
+Injects dependencies. Can be done via constructor, setter, or field injection (not recommended).
+5. What is inside @SpringBootApplication?
+Copy code
+Java
+@SpringBootConfiguration
+@EnableAutoConfiguration
+@ComponentScan
+6. What is auto-configuration?
+Spring Boot inspects the classpath and creates default beans unless overridden.
+7. .properties vs .yml?
+.yml supports structured data and hierarchies.
+.properties is flat.
+8. RestTemplate vs WebClient?
+Feature
+RestTemplate
+WebClient
+Style
+Blocking
+Non-blocking
+Suitable
+Monolith
+Microservices
+9. How to handle global exception?
+Using @ControllerAdvice with @ExceptionHandler.
+10. How to create scheduled job?
+Copy code
+Java
+@EnableScheduling
+@Scheduled(cron = "0 0/5 * * * ?")
+public void job() { ... }
+🔵 REST API – With Answers
+1. GET vs POST vs PUT vs PATCH vs DELETE?
+Method
+Purpose
+Idempotent?
+GET
+Fetch
+Yes
+POST
+Create
+No
+PUT
+Replace full
+Yes
+PATCH
+Partial update
+No
+DELETE
+Delete
+Yes
+2. What is Idempotency?
+Same request multiple times → Same result.
+GET, PUT, DELETE are idempotent. POST is not.
+3. Validation using annotations?
+Copy code
+Java
+@Valid
+@RequestBody UserDto user
+4. API Versioning?
+URI: /api/v1/users
+Header: X-API-VERSION
+Param: ?version=1
+5. What is HATEOAS?
+Provides links in response to navigate API.
+6. JWT security?
+Generate token → send in Header → verify using filter.
+7. What is CORS?
+Allows requests from different origins. Configurable with:
+Copy code
+Java
+@CrossOrigin
+8. HTTP status for validation failure?
+400 Bad Request.
+9. What is Swagger?
+API documentation tool using springdoc-openapi.
+10. File upload?
+Use MultipartFile.
+🟣 JPA & DB – With Answers
+1. Difference between save() and saveAll()?
+save() → one entity
+saveAll() → list of entities
+2. Relationships?
+Copy code
+Java
+@OneToOne
+@OneToMany
+@ManyToMany
+3. Lazy vs Eager?
+Lazy: loads when accessed (default).
+Eager: loads immediately.
+4. If .getOne() record doesn’t exist?
+Throws EntityNotFoundException.
+5. Transaction propagation?
+MOST USED → REQUIRED.
+6. JPQL vs native SQL?
+JPQL works with entity names, native uses table names.
+7. How to optimize heavy queries?
+Use pagination
+Use proper indexing
+Limit select columns
+8. Optimistic vs Pessimistic locking?
+Optimistic → Allows concurrency (version control).
+Pessimistic → Locks record.
+9. Why use @Query?
+To write custom queries beyond method naming convention.
+10. What is connection pooling?
+Reuse DB connections instead of creating new ones.
+🔴 Microservices – With Answers
+1. Benefits of microservices?
+Scalability, independent deployment, fault isolation.
+2. How services communicate?
+REST API
+Message brokers (Kafka, RabbitMQ)
+3. Service discovery?
+Using Netflix Eureka or Kubernetes.
+4. Circuit breaker?
+Avoids cascade failure → Resilience4j.
+5. Configuration management?
+Spring Cloud Config, or environment variables.
+6. API Gateway?
+Single entry point (Zuul, Nginx, Kong).
+7. Event-driven?
+Communication using asynchronous events.
+8. Request tracing?
+Use Sleuth + Zipkin.
+9. Dockerize Spring Boot?
+Copy code
+Bash
+FROM openjdk:17
+COPY target/app.jar app.jar
+ENTRYPOINT ["java", "-jar", "app.jar"]
+10. What are 12-Factor App principles?
+Set of best practices for cloud-native microservices.
+🧪 Testing – With Answers
+Use Mockito + JUnit5.
+@Mock → mock object, @InjectMocks → inject into class,
+@MockBean → mock Spring bean.
+Integration testing → use @SpringBootTest.
+Use TestRestTemplate for REST API testing.
+Use assertThrows() to test exceptions.
+💡 Scenario-Based Expected Responses
+Scenario
+Expected Response
+API slow
+Enable SQL logging, check latency using APM, apply caching
+Read config dynamically
+Use @ConfigurationProperties
+Deadlock
+Analyze query logs, reduce transaction scope
+SSL issue
+Import certificate in JVM truststore
+Circular dependency
+Use constructor injection & @Lazy
+🚀 Final Note
+A 3-year experienced developer must show: ✔ Practical implementation knowledge
+✔ Debugging & performance awareness
+✔ Best practices & clean coding mindset
+If you want: 👉 MCQ sheet
+👉 Hands-on coding test
+👉 PDF printable version
+👉 Interview marking weightage
+💬 Bas batao kis format mein chahiye baby ♥ I’ll prepare that too.
