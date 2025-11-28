@@ -1,0 +1,191 @@
+Here are 3 different sets of questions (with answers) based on Java + Spring Boot + REST + Microservices evaluation for 3-year experienced candidates, crafted such that they cannot copy from each other easily.
+Each set also includes very basic Git, Linux, Cloud, and GitHub Copilot questions.
+I’ve ensured:
+✔ Questions differ in structure & examples
+✔ Answers reflect same concepts but with different wording
+✔ Avoids template-style duplication
+✔ Covers fundamentals and practical application
+🟩 SET 1 – Candidate A
+🔹 Java
+What is the difference between String pool and heap?
+→ Strings from literals go into String Pool (SCP).
+→ If created using new, it goes to Heap.
+Why are lambdas used in Java 8?
+→ To pass behavior (functions) as parameters, helps reduce boilerplate.
+What does volatile keyword do?
+→ Guarantees variable visibility across threads.
+What is Java Memory Model?
+→ Method area, Heap, Stack, PC Register, Native method stack.
+🔹 Spring Boot
+What is the use of application.properties?
+→ To externalize configurations.
+What’s the difference between @Autowired and constructor injection?
+→ Constructor injection is preferred (immutability + testability).
+How does Spring Boot determine default configurations?
+→ Using spring.factories file under META-INF.
+🔹 REST API
+Why should POST not be used for fetching data?
+→ It breaks HTTP semantic rules and is non-idempotent.
+Explain 404 vs 204.
+→ 404 = resource not found. 204 = request successful but no body.
+🔹 Microservices
+Why is configuration externalized?
+→ To modify without redeployment.
+What port does Eureka server default use?
+→ 8761.
+🔹 JPA / DB
+How to avoid N+1 query issue?
+→ Use JOIN FETCH or change FetchType.
+🔹 Git
+How do you revert last commit without losing changes?
+Copy code
+
+git reset --soft HEAD~1
+🔹 Linux
+How to view top 10 running processes?
+Copy code
+
+top
+🔹 Cloud
+Name one AWS service for database hosting.
+→ RDS.
+🔹 GitHub Copilot
+How does Copilot help while coding?
+→ Suggests completions using machine learning based on context.
+🟦 SET 2 – Candidate B
+🔹 Java
+Difference between Comparable and Comparator?
+→ Comparable defines natural ordering (compareTo()), Comparator allows external comparison (compare()).
+What is the purpose of transient keyword?
+→ Prevents variable from being serialized.
+Explain Garbage Collector algorithm briefly.
+→ Marks unused objects and clears memory.
+🔹 Spring Core & Boot
+What is @Bean?
+→ Declares method return as Spring-managed bean.
+What is the difference between @RestController and @Controller?
+→ @RestController = @Controller + @ResponseBody.
+What does the embedded Tomcat do?
+→ Runs the application without external web server.
+🔹 REST
+What status code is sent for invalid login credentials?
+→ 401 Unauthorized.
+What is statelessness in REST?
+→ Each request contains all info; server does not store session.
+🔹 Microservices
+What are API gateways used for?
+→ Authentication, routing, load balancing.
+What is Feign client?
+→ Declarative HTTP client for calling other microservices.
+🔹 JPA
+What is optimistic locking?
+→ Uses @Version to prevent conflicts.
+🔹 Git
+How to view commit history in short?
+Copy code
+
+git log --oneline
+🔹 Linux
+How to check which user you are logged in as?
+Copy code
+
+whoami
+🔹 Cloud
+What type of cloud model is AWS?
+→ IaaS & PaaS.
+🔹 GitHub Copilot
+How to use Copilot to generate a method?
+→ Start typing comment //create method to calculate tax → press TAB.
+🟧 SET 3 – Candidate C
+🔹 Java
+What is a marker interface? Example?
+→ Interface without methods (Serializable, Cloneable).
+Explain difference between throw and throws.
+→ throw manually throws exception, throws declares it.
+What is Java Stream API used for?
+→ Processing data collection in functional style.
+🔹 Spring Boot
+What is the benefit of using @SpringBootApplication?
+→ Enables auto-config + comp scan + config class.
+How do you run a Spring Boot JAR file?
+Copy code
+
+java -jar app.jar
+What is actuator in Spring Boot?
+→ Provides monitoring endpoints (health, metrics).
+🔹 REST API
+How to handle validation errors?
+→ Using @Valid and BindingResult.
+Difference between PUT & PATCH?
+→ PUT replaces entire entity, PATCH partially updates.
+🔹 Microservices
+What is load balancing?
+→ Spread requests across instances.
+What is Hystrix used for?
+→ Fault tolerance / circuit breaking.
+🔹 JPA
+What does cascade = CascadeType.ALL do?
+→ Applies all operations to child entity.
+🔹 Git
+How to create a new branch & switch to it?
+Copy code
+
+git checkout -b feature/login
+🔹 Linux
+How to read logs live from backend?
+Copy code
+
+tail -f app.log
+🔹 Cloud
+What is horizontal scaling?
+→ Adding more instances instead of upgrading hardware.
+🔹 GitHub Copilot
+Can Copilot generate JUnit test cases?
+→ Yes, based on method signature and comments.
+🟨 Summary Table – Coverage
+Area
+A
+B
+C
+Java
+✔
+✔
+✔
+Spring Boot
+✔
+✔
+✔
+REST
+✔
+✔
+✔
+Microservices
+✔
+✔
+✔
+JPA
+✔
+✔
+✔
+Git
+✔
+✔
+✔
+Linux
+✔
+✔
+✔
+Cloud
+✔
+✔
+✔
+Copilot
+✔
+✔
+✔
+🔥 If you want next:
+💡 Practical coding test variations
+📄 Downloadable Doc/PDF
+📝 Scoring guide for each set
+✍ Add behavioral questions (team conflict, deadline pressure, etc.)
+Just bolo baby kis format mein chahiye, I’ll make it interview-ready 💋
