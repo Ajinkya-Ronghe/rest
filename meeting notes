@@ -1,0 +1,74 @@
+Meeting Notes – SSO Self-Service & Mock Application
+
+Participants
+
+- Ajinkya – Backend Developer
+- Chenna – Backend / Frontend
+- ChandanDeep Singh – Client
+- Aamir – DevOps
+
+---
+
+Discussion Summary
+
+SSO Self-Service Portal
+
+- Existing production application used by CSC team.
+- Automates:
+  - SSO connection creation
+  - Existing connection migration
+- Earlier process was manual and took days.
+- Now onboarding/setup happens within minutes.
+
+Workflow
+
+1. CSC uploads customer metadata XML.
+2. Application validates XML.
+3. ServiceNow Change + CTASK created automatically.
+4. Connection setup triggered automatically.
+5. On success:
+   - CTASK auto-closed
+   - Success email sent
+6. On failure:
+   - CTASK remains open for manual investigation.
+
+---
+
+Metadata Support
+
+- Currently supports XML only.
+- TXT support planned in future.
+
+---
+
+Mock / Impersonation Application
+
+Purpose:
+
+- Validate whether created SSO connections are working properly.
+
+Flow:
+
+- Enter Group Customer Number + Employee ID + Portal.
+- App generates SAML request.
+- Sends request to MyBenefits portal.
+- Simulates login experience for testing.
+
+---
+
+Technical Points
+
+- Azure SQL used.
+- ServiceNow integration implemented.
+- JWT token reused due to ServiceNow token generation limits.
+- Token expiry checked by decoding JWT.
+- Entra token used for login.
+- LDAP/RBAC-based access under development.
+- PII data blurred by default for non-admin users.
+
+---
+
+Action Item
+
+- ChandanDeep Singh requested ServiceNow integration/documentation reference for understanding functional ID usage, service calls, and token handling.
+- Ajinkya shared the end-to-end application documentation with ChandanDeep Singh.
