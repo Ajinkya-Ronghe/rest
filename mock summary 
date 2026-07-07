@@ -1,0 +1,27 @@
+Summary (Point-wise)
+
+Added group-based access control and permission handling.
+
+Updated Azure AD configuration and generator to support AD group-based authorization using environment variables.
+
+Implemented database storage for user groups.
+
+Created a new groupService.js for frontend group-based PI data blurring.
+
+Added new constants required for group-based functionality.
+
+Enhanced SSOForm and useSSOForm to support group-level access.
+
+Expanded App.jsx to handle impersonation and permission management.
+
+Added Metlink support.
+
+Fixed SAML request issues.
+
+Applied minor fixes to azure-ad-generator.js.
+
+Updated vite.config.ts with additional configuration.
+
+Updated test cases for generator, server, App, SSOForm, and useSSOForm.
+
+Added testing instructions to the README.
