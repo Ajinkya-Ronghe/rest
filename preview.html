@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SOX Sentinel — Continuous Control Surveillance</title>
+  <style>
+    :root{
+      --bg:#07111f;--panel:#0c1a2b;--ink:#f7fbff;--muted:#a7b5c7;--blue:#4fb4ff;--cyan:#5ff7e8;--green:#67e29b;--amber:#ffd166;--red:#ff5b6e;--line:rgba(255,255,255,.15)
+    }
+    *{box-sizing:border-box} body{margin:0;background:var(--bg);font-family:Inter,Segoe UI,Arial,sans-serif;color:var(--ink);overflow:hidden}
+    .deck{width:100vw;height:100vh;position:relative;background:radial-gradient(circle at 75% 20%,rgba(79,180,255,.22),transparent 32%),radial-gradient(circle at 18% 82%,rgba(95,247,232,.18),transparent 34%),linear-gradient(135deg,#07111f,#0a1424 55%,#08101d)}
+    .slide{position:absolute;inset:0;padding:58px 72px;display:none;animation:fade .35s ease}.slide.active{display:block}@keyframes fade{from{opacity:.25;transform:translateY(8px)}to{opacity:1;transform:none}}
+    .kicker{letter-spacing:.18em;text-transform:uppercase;color:var(--cyan);font-size:15px;font-weight:800}.title{font-size:66px;line-height:1.02;margin:14px 0 18px;font-weight:900;max-width:1050px}.subtitle{font-size:25px;line-height:1.35;color:var(--muted);max-width:980px}.footer{position:absolute;left:72px;right:72px;bottom:30px;display:flex;justify-content:space-between;color:#7f8da2;font-size:13px}.logo{font-weight:900;color:#fff}.slideNo{color:#91a0b4}
+    h1{font-size:46px;line-height:1.08;margin:0 0 22px;font-weight:900} h2{font-size:28px;margin:0 0 12px}.grid{display:grid;gap:22px}.cols2{grid-template-columns:1fr 1fr}.cols3{grid-template-columns:repeat(3,1fr)}.card{background:rgba(12,26,43,.78);border:1px solid var(--line);border-radius:24px;padding:26px;box-shadow:0 20px 50px rgba(0,0,0,.24)}.bigNum{font-size:62px;font-weight:900}.muted{color:var(--muted)}.pill{display:inline-block;padding:8px 13px;border-radius:999px;background:rgba(79,180,255,.14);border:1px solid rgba(79,180,255,.3);color:#bfe6ff;font-weight:800;font-size:13px}.row{display:flex;align-items:center;gap:18px}.icon{width:46px;height:46px;border-radius:16px;display:grid;place-items:center;background:linear-gradient(135deg,rgba(79,180,255,.25),rgba(95,247,232,.16));font-size:25px}.flow{display:flex;align-items:stretch;gap:14px;margin-top:28px}.node{flex:1;min-height:112px;background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:22px;padding:20px}.arrow{display:grid;place-items:center;color:var(--cyan);font-size:28px}.small{font-size:17px;line-height:1.45}.large{font-size:26px;line-height:1.35}.score{width:210px;height:210px;border-radius:50%;background:conic-gradient(var(--red) 0 92%,rgba(255,255,255,.1) 92% 100%);display:grid;place-items:center;margin:auto}.scoreInner{width:168px;height:168px;border-radius:50%;background:#08111f;display:grid;place-items:center;text-align:center}.risk{color:var(--red);font-weight:900}.good{color:var(--green)}.warn{color:var(--amber)}.blue{color:var(--blue)}ul{margin:10px 0 0 22px;padding:0}li{margin:10px 0}.timeline{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-top:25px}.step{position:relative;padding:24px;background:rgba(255,255,255,.06);border-radius:24px;border:1px solid var(--line);min-height:180px}.step:before{content:attr(data-step);position:absolute;top:-15px;left:22px;background:var(--cyan);color:#00111b;font-weight:900;border-radius:999px;padding:6px 12px}.quote{font-size:36px;line-height:1.23;font-weight:800;max-width:980px}.alertBox{border-left:7px solid var(--red);background:rgba(255,91,110,.08);border-radius:20px;padding:24px}.table{display:grid;gap:1px;border-radius:18px;overflow:hidden;border:1px solid var(--line)}.tr{display:grid;grid-template-columns:1.1fr 1fr 1fr .7fr .8fr}.td{padding:15px;background:rgba(255,255,255,.06);font-size:16px}.th .td{font-weight:900;color:#d8e9ff;background:rgba(79,180,255,.16)}.controls{position:fixed;right:22px;bottom:20px;display:flex;gap:10px;z-index:20}.btn{background:rgba(255,255,255,.1);color:white;border:1px solid var(--line);border-radius:12px;padding:10px 14px;cursor:pointer}.btn:hover{background:rgba(255,255,255,.18)}
+    @media print{body{overflow:visible}.deck{height:auto}.slide{display:block !important;position:relative;width:100vw;height:100vh;page-break-after:always}.controls{display:none}}
+  </style>
+
+<style>
+.tm-header{
+position:fixed;top:0;left:0;right:0;height:58px;
+background:#c00000;color:white;display:flex;align-items:center;
+padding:0 22px;font-family:Arial,sans-serif;z-index:9999;
+box-shadow:0 2px 6px rgba(0,0,0,.2)
+}
+.tm-logo{
+font-weight:bold;font-size:22px;letter-spacing:.4px;
+background:white;color:#c00000;padding:6px 12px;border-radius:6px;
+margin-right:14px;
+}
+.tm-title{font-size:18px;font-weight:600}
+.tm-footer{
+position:fixed;bottom:0;left:0;right:0;height:32px;
+background:#222;color:#ddd;font-size:12px;
+display:flex;justify-content:center;align-items:center;
+font-family:Arial,sans-serif;z-index:9999;
+}
+body{padding-top:68px;padding-bottom:42px;}
+</style>
+
+</head>
+<body>
+<div class="tm-header">
+  <div class="tm-logo">TECH MAHINDRA</div>
+  <div class="tm-title">SOX Sentinel – AI Powered Continuous Control Surveillance</div>
+</div>
+
+<div class="deck">
+  <section class="slide active">
+    <div class="kicker">Leadership Showcase · SOX Innovation</div>
+    <div class="title">SOX Sentinel</div>
+    <div class="subtitle">AI-assisted continuous control surveillance that detects SOX exceptions in near real time — before they become quarterly audit findings.</div>
+    <div style="position:absolute;right:86px;bottom:115px;width:390px" class="card">
+      <div class="pill">Manager-led prototype</div>
+      <h2 style="margin-top:18px">Simple. Explainable. Audit-ready.</h2>
+      <p class="muted large">Python + AI + control evidence automation</p>
+    </div>
+    <div class="footer"><span class="logo">SOX Sentinel</span><span class="slideNo">01</span></div>
+  </section>
+
+  <section class="slide">
+    <div class="kicker">The problem</div><h1>SOX control reviews are often too late.</h1>
+    <div class="grid cols3">
+      <div class="card"><div class="bigNum">90+</div><h2>days</h2><p class="muted">Exceptions may remain hidden until quarterly review cycles.</p></div>
+      <div class="card"><div class="bigNum">Sample</div><h2>based testing</h2><p class="muted">Auditors review selected samples, not every risky session or change.</p></div>
+      <div class="card"><div class="bigNum">Manual</div><h2>evidence chase</h2><p class="muted">Control owners spend time collecting logs, approvals and explanations.</p></div>
+    </div>
+    <div class="quote" style="margin-top:34px">The opportunity: move from retrospective audit support to continuous control assurance.</div>
+    <div class="footer"><span class="logo">SOX Sentinel</span><span class="slideNo">02</span></div>
+  </section>
+
+  <section class="slide">
+    <div class="kicker">The use case</div><h1>Privileged Access Monitoring for SOX-relevant systems</h1>
+    <div class="grid cols2">
+      <div class="card"><h2>What the system learns</h2><ul class="large muted"><li>Normal login window and source IP</li><li>Usually accessed systems</li><li>Average session duration</li><li>Typical privilege behaviour</li><li>Approved ticket patterns</li></ul></div>
+      <div class="card"><h2>What the system flags</h2><ul class="large muted"><li>Off-hours privileged access</li><li>Unfamiliar financial system access</li><li>Abnormal session duration</li><li>Privilege escalation mid-session</li><li>No linked approval or ticket</li></ul></div>
+    </div>
+    <div class="footer"><span class="logo">SOX Sentinel</span><span class="slideNo">03</span></div>
+  </section>
+
+  <section class="slide">
+    <div class="kicker">Solution architecture</div><h1>One control, one stream, one powerful alert workflow</h1>
+    <div class="flow">
+      <div class="node"><div class="icon">📄</div><h2>SOX inputs</h2><p class="small muted">Control descriptions, prior audit reports, risk-control matrix</p></div><div class="arrow">→</div>
+      <div class="node"><div class="icon">🔄</div><h2>Live events</h2><p class="small muted">CyberArk sessions, login logs, privilege changes, tickets</p></div><div class="arrow">→</div>
+      <div class="node"><div class="icon">🧠</div><h2>AI + Python engine</h2><p class="small muted">Rules, anomaly detection, prior-finding match, risk scoring</p></div><div class="arrow">→</div>
+      <div class="node"><div class="icon">🚨</div><h2>Alert + evidence</h2><p class="small muted">Explanation, score, control mapping and audit log</p></div>
+    </div>
+    <div class="card" style="margin-top:32px"><p class="large"><b>Design principle:</b> AI explains and prioritises. Humans decide and sign off.</p></div>
+    <div class="footer"><span class="logo">SOX Sentinel</span><span class="slideNo">04</span></div>
+  </section>
+
+  <section class="slide">
+    <div class="kicker">Detection model</div><h1>Explainable risk scoring, not black-box judgement</h1>
+    <div class="grid cols3">
+      <div class="card"><div class="icon">✅</div><h2>1. SOX rules</h2><p class="muted">Approved hours, authorised users, financial systems, valid tickets and segregation checks.</p></div>
+      <div class="card"><div class="icon">📈</div><h2>2. Behaviour baseline</h2><p class="muted">Python ML learns normal activity and flags unusual behaviour using anomaly detection.</p></div>
+      <div class="card"><div class="icon">🔍</div><h2>3. Audit memory</h2><p class="muted">Previous-year findings raise risk when similar patterns reappear.</p></div>
+    </div>
+    <div class="card" style="margin-top:28px"><p class="large">Every alert answers: <span class="blue">what happened</span>, <span class="blue">why it matters</span>, <span class="blue">which control is impacted</span>, and <span class="blue">what evidence supports it</span>.</p></div>
+    <div class="footer"><span class="logo">SOX Sentinel</span><span class="slideNo">05</span></div>
+  </section>
+
+  <section class="slide">
+    <div class="kicker">Demo moment</div><h1>High-risk privileged session detected</h1>
+    <div class="grid cols2">
+      <div class="card">
+        <div class="score"><div class="scoreInner"><div><div class="bigNum">92</div><div class="risk">HIGH RISK</div></div></div></div>
+        <h2 style="text-align:center;margin-top:18px">Anomalous Privileged Session</h2>
+      </div>
+      <div class="alertBox">
+        <h2>Why it was flagged</h2>
+        <ul class="large muted"><li>Saturday 2:14 AM login</li><li>Finance reporting server never accessed before</li><li>68-minute session vs 22-minute baseline</li><li>Admin escalation during session</li><li>No approval ticket found</li></ul>
+      </div>
+    </div>
+    <div class="card" style="margin-top:24px"><p class="large"><b>Auto-routed to:</b> Control Owner + SOC &nbsp; | &nbsp; <b>Evidence:</b> session log, baseline comparison, ticket check, control mapping</p></div>
+    <div class="footer"><span class="logo">SOX Sentinel</span><span class="slideNo">06</span></div>
+  </section>
+
+  <section class="slide">
+    <div class="kicker">Leadership value</div><h1>Business impact in audit language</h1>
+    <div class="table">
+      <div class="tr th"><div class="td">Current state</div><div class="td">With SOX Sentinel</div><div class="td">Impact</div><div class="td">Owner</div><div class="td">Outcome</div></div>
+      <div class="tr"><div class="td">Quarterly review</div><div class="td">Near real-time surveillance</div><div class="td good">Faster detection</div><div class="td">Control owner</div><div class="td">Early remediation</div></div>
+      <div class="tr"><div class="td">Sample-based testing</div><div class="td">100% event analysis</div><div class="td good">Better coverage</div><div class="td">Audit / Risk</div><div class="td">Reduced blind spots</div></div>
+      <div class="tr"><div class="td">Manual evidence</div><div class="td">Auto-evidence pack</div><div class="td good">Less effort</div><div class="td">Operations</div><div class="td">Audit readiness</div></div>
+      <div class="tr"><div class="td">Reactive findings</div><div class="td">Proactive alerts</div><div class="td good">Lower repeat risk</div><div class="td">Leadership</div><div class="td">Stronger governance</div></div>
+    </div>
+    <div class="footer"><span class="logo">SOX Sentinel</span><span class="slideNo">07</span></div>
+  </section>
+
+  <section class="slide">
+    <div class="kicker">Implementation roadmap</div><h1>A realistic Python-first MVP</h1>
+    <div class="timeline">
+      <div class="step" data-step="1"><h2>Data setup</h2><p class="muted">Create synthetic CyberArk, ticket and control input datasets.</p></div>
+      <div class="step" data-step="2"><h2>Rule engine</h2><p class="muted">Build explainable SOX checks in Python.</p></div>
+      <div class="step" data-step="3"><h2>Anomaly model</h2><p class="muted">Train baseline and generate risk score.</p></div>
+      <div class="step" data-step="4"><h2>Dashboard</h2><p class="muted">Streamlit dashboard with alert and evidence view.</p></div>
+    </div>
+    <div class="card" style="margin-top:34px"><p class="large"><b>Leadership ask:</b> approve a focused MVP for privileged access surveillance, then expand to change management and user access review controls.</p></div>
+    <div class="footer"><span class="logo">SOX Sentinel</span><span class="slideNo">08</span></div>
+  </section>
+
+  <section class="slide">
+    <div class="kicker">Closing message</div><h1>From audit finding to live control signal</h1>
+    <div class="quote">SOX Sentinel helps leadership see control risk as it happens — with clear evidence, explainable scoring and human review built in.</div>
+    <div class="grid cols3" style="margin-top:42px">
+      <div class="card"><div class="bigNum good">100%</div><h2>sessions analysed</h2></div>
+      <div class="card"><div class="bigNum blue">&lt;5 min</div><h2>target detection</h2></div>
+      <div class="card"><div class="bigNum warn">1</div><h2>focused MVP control</h2></div>
+    </div>
+    <div class="footer"><span class="logo">SOX Sentinel</span><span class="slideNo">09</span></div>
+  </section>
+</div>
+<div class="controls"><button class="btn" onclick="prev()">←</button><button class="btn" onclick="next()">→</button></div>
+<script>
+  const slides=[...document.querySelectorAll('.slide')]; let i=0;
+  function show(n){slides[i].classList.remove('active'); i=(n+slides.length)%slides.length; slides[i].classList.add('active')}
+  function next(){show(i+1)} function prev(){show(i-1)}
+  window.addEventListener('keydown',e=>{if(['ArrowRight',' ','PageDown'].includes(e.key))next(); if(['ArrowLeft','PageUp'].includes(e.key))prev();});
+</script>
+
+<div class="tm-footer">
+© 2026 Tech Mahindra. Confidential & Proprietary. For internal leadership discussion only.
+</div>
+
+</body>
+</html>
