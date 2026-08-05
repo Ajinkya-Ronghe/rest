@@ -1,0 +1,158 @@
+
+MetKnight - Introduction (Mini Points)
+
+1. The Problem
+Vulnerable dependencies often discovered after code is pushed.
+Dependabot alerts appear in GitHub Security tab, not while coding.
+SonarLint/Veracode check source code, not dependency CVEs.
+Developers usually learn about issues during PRs or later security scans.
+Late discovery = higher remediation cost and lower adoption.
+
+2. What MetKnight Is
+VS Code extension for real-time dependency CVE scanning.
+Detects vulnerabilities directly in the editor while coding.
+Includes AI-powered "Fix All" dependency upgrades.
+One-liner: Dependabot, but live in your editor, offline-capable, and self-fixing.
+
+3. How It's Different
+Dependabot: Cloud-based, post-push.
+SonarLint/Veracode: SAST, code-focused.
+MetKnight: Live in-editor dependency scanning.
+Scans as you type and on demand.
+One-click AI remediation.
+Works offline; no data leaves the network by default.
+
+4. Key Pillars
+Real-time: Inline warnings, hover cards, instant feedback.
+Offline & Secure: Uses local GitHub Advisory Database mirror.
+AI Remediation: "Fix All with Copilot" updates vulnerable packages automatically.
+Governance: n-2 policy, blocklists, minimum-version rules.
+Multi-language: Java, JavaScript/TypeScript, and Python.
+
+5. Validation
+Results matched real Dependabot alerts 1:1 on a MetLife repo.
+Refined through direct engineering feedback and testing.
+
+6. Demo Transition
+"Let's stop talking about it and see what a developer actually experiences in VS Code."
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+MetKnight - Live Demo (Mini Points)
+
+Pre-Demo Setup
+Open VS Code with a repo containing known vulnerable dependencies.
+Verify GitHub Copilot Chat is signed in and working.
+Run Update Advisory Database to warm the offline cache.
+Close old vulnerability tabs.
+Keep a backup vulnerable project ready.
+
+1. Inline Diagnostics
+Open package.json, build.gradle, pom.xml, or requirements.txt.
+
+Highlight vulnerability squiggles/colors:
+● Critical
+○ High
+○ Moderate
+○ Low
+
+Hover to show:
+- Severity
+- CVE/GHSA ID
+- Summary
+- Required version
+- Staleness info (if enabled)
+
+Key point: Automatic scanning as soon as the file opens.
+
+2. Sidebar Summary
+Click MetKnight in Activity Bar.
+Show vulnerability counts by file and severity.
+
+3. Vulnerability Dashboard
+Open MetKnight: Show All Vulnerabilities.
+
+Demonstrate:
+- Sortable columns
+- Live filtering
+- Combined duplicate CVEs
+- Row checkboxes for scope selection
+
+Key point: Central view for the entire repository.
+
+4. Fix All with Copilot (Star Feature)
+Select vulnerabilities.
+Click Fix All with Copilot.
+
+Explain:
+- Builds a remediation prompt.
+- Opens Copilot Agent mode.
+- Waits through approvals.
+- Applies version upgrades automatically.
+
+Show:
+- Progress/loading bar
+- Status updates (☑ Fixed / ⚠ Unresolved / 💡 Suggestion)
+- Auto-rescan after completion
+
+Fallback:
+Use Command Palette → Fix All with Copilot.
+
+5. Detailed Report
+Click ⬇ export/report button.
+Opens full per-CVE HTML report.
+Useful for audits and non-VS Code users.
+
+6. Governance Features
+n-2 Staleness Policy: Flags outdated dependencies.
+
+Policy-as-Code:
+- Block pre-releases
+- Blocklisted packages
+- Minimum version requirements
+- Admin-controlled configuration
+
+7. Settings & Model Selection
+Open MetKnight: Open Settings.
+Show available Copilot models.
+
+Mention:
+- Offline mode is default.
+- Local GHSA mirror.
+- Incremental updates only.
+- Optional online mode for OSV.dev lookups.
+
+8. Wrap-Up
+
+"Same detection as GitHub Dependabot, but live in the editor, works offline, and can fix vulnerabilities with a single click."
+
+Quick Q&A
+
+Q: Does code leave the machine?
+A: No in offline mode; online mode only sends package name/version to OSV.dev.
+
+Q: Supported languages?
+A: Java (Gradle/Maven), JavaScript/TypeScript (npm), Python (pip).
+
+Q: Can Copilot remove dependencies?
+A: No. It only upgrades versions or flags unresolved cases.
+
+Q: Who enables staleness policies?
+A: Admins via configuration.
+
+Q: Does it match Dependabot results?
+A: Yes, validated against real Dependabot findings with 1:1 matching results.
