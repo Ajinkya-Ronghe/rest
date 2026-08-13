@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MetKnight - Leadership Pitch</title>
+<style>
+  :root {
+    --bg: #0b1020;
+    --panel: #121a2b;
+    --panel-2: #182238;
+    --text: #eaf0ff;
+    --muted: #aab7cf;
+    --accent: #5ee1a4;
+    --accent-2: #7ab8ff;
+    --border: #2a3856;
+    --danger: #ff8a8a;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: Inter, "Segoe UI", Arial, sans-serif;
+    background:
+      radial-gradient(circle at top right, rgba(122,184,255,.11), transparent 34%),
+      radial-gradient(circle at top left, rgba(94,225,164,.08), transparent 28%),
+      var(--bg);
+    color: var(--text);
+    line-height: 1.65;
+  }
+
+  .container {
+    width: min(1100px, calc(100% - 32px));
+    margin: 0 auto;
+    padding: 48px 0 72px;
+  }
+
+  .hero {
+    border: 1px solid var(--border);
+    background: linear-gradient(180deg, rgba(24,34,56,.95), rgba(18,26,43,.95));
+    border-radius: 22px;
+    padding: 36px;
+    box-shadow: 0 18px 60px rgba(0,0,0,.28);
+    margin-bottom: 28px;
+  }
+
+  .eyebrow {
+    display: inline-block;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 10px;
+  }
+
+  h1 {
+    font-size: clamp(32px, 5vw, 56px);
+    line-height: 1.05;
+    margin: 0 0 18px;
+    letter-spacing: -.03em;
+  }
+
+  .one-liner {
+    font-size: clamp(18px, 2.4vw, 24px);
+    color: #d7e2f8;
+    max-width: 950px;
+    margin: 0;
+  }
+
+  section {
+    background: rgba(18,26,43,.92);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 28px;
+    margin: 20px 0;
+  }
+
+  h2 {
+    margin: 0 0 16px;
+    font-size: 25px;
+    line-height: 1.2;
+  }
+
+  p { margin: 0 0 14px; color: #dce5f5; }
+  strong { color: #ffffff; }
+
+  .flow {
+    background: var(--panel-2);
+    border-left: 4px solid var(--accent);
+    border-radius: 12px;
+    padding: 16px 18px;
+    margin: 14px 0;
+    font-weight: 700;
+    color: #f5f8ff;
+  }
+
+  .highlight {
+    color: var(--accent);
+    font-weight: 800;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0,1fr));
+    gap: 14px;
+    margin-top: 14px;
+  }
+
+  .card {
+    padding: 18px;
+    border-radius: 14px;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+  }
+
+  .card h3 {
+    margin: 0 0 8px;
+    font-size: 17px;
+    color: var(--accent-2);
+  }
+
+  .card p { margin: 0; }
+
+  .table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 820px;
+    background: var(--panel-2);
+  }
+
+  th, td {
+    padding: 13px 12px;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+    vertical-align: top;
+  }
+
+  th {
+    background: #202c47;
+    color: #ffffff;
+    font-size: 14px;
+  }
+
+  td {
+    color: #dce5f5;
+    font-size: 14px;
+  }
+
+  tr:last-child td { border-bottom: 0; }
+
+  .yes { color: var(--accent); font-weight: 800; }
+  .no { color: var(--danger); font-weight: 800; }
+  .partial { color: #ffd479; font-weight: 800; }
+
+  .ask {
+    border-color: rgba(94,225,164,.45);
+    background: linear-gradient(135deg, rgba(94,225,164,.08), rgba(18,26,43,.95));
+  }
+
+  .ask p {
+    font-size: 19px;
+    margin: 0;
+  }
+
+  footer {
+    text-align: center;
+    color: var(--muted);
+    font-size: 13px;
+    margin-top: 28px;
+  }
+
+  @media (max-width: 760px) {
+    .container { width: min(100% - 20px, 1100px); padding-top: 22px; }
+    .hero, section { padding: 22px; border-radius: 15px; }
+    .grid { grid-template-columns: 1fr; }
+  }
+
+  @media print {
+    body { background: #fff; color: #000; }
+    .container { width: 100%; padding: 0; }
+    .hero, section {
+      background: #fff;
+      color: #000;
+      box-shadow: none;
+      border-color: #bbb;
+      break-inside: avoid;
+    }
+    p, .one-liner, td { color: #111; }
+    h1, h2, h3, strong { color: #000; }
+    .flow, .card, table, th { background: #f5f5f5; color: #000; }
+  }
+</style>
+</head>
+<body>
+  <main class="container">
+
+    <header class="hero">
+      <div class="eyebrow">Leadership Pitch</div>
+      <h1>MetKnight</h1>
+      <p class="one-liner">
+        <strong>MetKnight is Dependabot's coverage + Sonar/Veracode's inline developer experience + Copilot's remediation power</strong>
+        — running locally, for free, inside the IDE developers already live in.
+      </p>
+    </header>
+
+    <section>
+      <h2>1. The Problem Today</h2>
+      <p>
+        Dependabot/Veracode/Sonar findings live in a dashboard developers don't check —
+        they surface post-commit, in PRs, or in a separate portal, days after the code was written.
+      </p>
+      <div class="flow">
+        Open ticket → find the file → figure out the patched version → bump it → hope nothing breaks → wait for CI → repeat per package
+      </div>
+      <p>
+        Multiply that by hundreds of repos and thousands of transitive dependencies —
+        this is pure developer time and org risk, not license cost. Those tools are already paid for,
+        but the <strong>time-to-remediate is where the real cost sits.</strong>
+      </p>
+    </section>
+
+    <section>
+      <h2>2. What MetKnight Does</h2>
+      <div class="grid">
+        <div class="card">
+          <h3>Live IDE Scanning</h3>
+          <p>Scans <strong>npm, Gradle, Maven, and pip manifests live in the editor</strong> against an <strong>offline GHSA mirror</strong> — no per-scan network/API cost.</p>
+        </div>
+        <div class="card">
+          <h3>Inline Findings</h3>
+          <p>Flags CVEs and <strong>n-2 version staleness inline</strong> using the same UX pattern as SonarLint squiggles.</p>
+        </div>
+        <div class="card">
+          <h3>Fix All</h3>
+          <p><strong>"Fix All"</strong> is the differentiator: one click resolves every flagged CVE automatically.</p>
+        </div>
+        <div class="card">
+          <h3>Mechanical First</h3>
+          <p>Mechanically bumps the manifest to the patched version — <strong>deterministic, instant, zero AI cost.</strong></p>
+        </div>
+        <div class="card">
+          <h3>Build Verification</h3>
+          <p>Runs the project's real <strong>build/install</strong> to prove the change did not break anything.</p>
+        </div>
+        <div class="card">
+          <h3>AI Only When Needed</h3>
+          <p>Escalates to <strong>Copilot</strong> only when the build fails or the fix needs judgment, passing the exact failure log so it can fix forward instead of rediscovering the problem.</p>
+        </div>
+      </div>
+      <p style="margin-top:14px;">
+        Every dependency removal requires <strong>explicit developer approval — no silent breakage.</strong>
+      </p>
+    </section>
+
+    <section>
+      <h2>3. Cost / Time / Token Savings</h2>
+      <p><strong>Token cost:</strong> the old approach sent every fix to Copilot in agent mode — multiple tool calls, file reads, and build retries per package. The new mechanical-first pipeline means the common case — a clean version bump — costs <span class="highlight">zero LLM tokens</span>.</p>
+      <p><strong>Time:</strong> what used to be manual remediation — find → research → bump → test → repeat — becomes a <span class="highlight">single click</span>, taking seconds to minutes instead of hours per vulnerability batch.</p>
+      <p><strong>Effort/tooling removed:</strong> no ticket triage, no manual patched-version lookup, and no manual dependency-tree spelunking. MetKnight traces and displays the <strong>parent dependency automatically.</strong></p>
+      <p><strong>Net effect:</strong> the same value proposition as <strong>shift-left security</strong>, but actually acted on at write-time instead of just reported.</p>
+    </section>
+
+    <section>
+      <h2>4. How It Stacks Up</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Capability</th>
+              <th>Dependabot</th>
+              <th>SonarQube</th>
+              <th>Veracode</th>
+              <th>MetKnight</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Inline IDE feedback</td>
+              <td class="no">No</td>
+              <td class="yes">Yes (lint-only)</td>
+              <td class="no">No</td>
+              <td class="yes">Yes</td>
+            </tr>
+            <tr>
+              <td>CVE/advisory detection</td>
+              <td class="yes">Yes</td>
+              <td class="partial">Partial</td>
+              <td class="yes">Yes</td>
+              <td class="yes">Yes (offline mirror)</td>
+            </tr>
+            <tr>
+              <td>n-2 staleness / drift detection</td>
+              <td class="no">No</td>
+              <td class="no">No</td>
+              <td class="no">No</td>
+              <td class="yes">Yes</td>
+            </tr>
+            <tr>
+              <td>One-click automated remediation</td>
+              <td class="partial">No (PR only)</td>
+              <td class="no">No</td>
+              <td class="no">No</td>
+              <td class="yes">Yes</td>
+            </tr>
+            <tr>
+              <td>Verifies the fix actually builds</td>
+              <td class="no">No</td>
+              <td class="no">No</td>
+              <td class="no">No</td>
+              <td class="yes">Yes</td>
+            </tr>
+            <tr>
+              <td>Transitive dependency traceability</td>
+              <td class="partial">Limited</td>
+              <td class="no">No</td>
+              <td class="no">No</td>
+              <td class="yes">Yes</td>
+            </tr>
+            <tr>
+              <td>Runs without sending code to a 3rd-party SaaS</td>
+              <td class="no">No</td>
+              <td class="no">No</td>
+              <td class="partial">Depends</td>
+              <td class="yes">Yes (offline-first)</td>
+            </tr>
+            <tr>
+              <td>Cost per fix</td>
+              <td>PR review time</td>
+              <td>N/A</td>
+              <td>N/A</td>
+              <td class="yes">Seconds, near-zero token cost</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="margin-top:14px;">
+        <strong>MetKnight isn't replacing these tools' compliance/reporting function</strong> —
+        it's the missing "last mile" that turns their findings into closed tickets automatically.
+      </p>
+    </section>
+
+    <section>
+      <h2>5. Scope for Expansion</h2>
+      <p><strong>Multi-IDE:</strong> the core engine — advisory matching, version resolution, mechanical-bump-then-build logic — is already IDE-agnostic TypeScript/Node. A JetBrains (IntelliJ/WebStorm) plugin is a UI-layer port, not a rewrite, since the heavy lifting isn't VS Code-specific.</p>
+      <p><strong>Ecosystem coverage:</strong> npm/Gradle/Maven/pip today; <strong>NuGet (.NET) and Go modules</strong> are natural next additions using the same parser pattern.</p>
+      <p><strong>Org-wide policy enforcement:</strong> the existing policy-as-code engine — block-prerelease, blocklist, min-version rules — can become a centrally pushed compliance baseline. Security teams define rules once; every repo/IDE enforces them automatically.</p>
+      <p><strong>CI/CD gate:</strong> the same mechanical-bump-and-build logic can run headless in a pipeline stage, turning MetKnight into a <strong>pre-merge gate</strong>, not just a developer convenience.</p>
+      <p><strong>Fleet-wide dashboard:</strong> aggregate per-repo output-channel/report data into a rollup view — <strong>"how stale is our dependency posture org-wide?"</strong> — a metric leadership can track quarter over quarter.</p>
+    </section>
+
+    <section class="ask">
+      <h2>6. The Ask</h2>
+      <p>
+        <strong>Position this as an internal force-multiplier on top of existing security spend.</strong>
+        Dependabot/Veracode/Sonar stay as the system of record and compliance layer —
+        <strong>MetKnight is the remediation accelerator that closes the loop.</strong>
+      </p>
+    </section>
+
+    <footer>MetKnight Leadership Pitch</footer>
+  </main>
+</body>
+</html>
